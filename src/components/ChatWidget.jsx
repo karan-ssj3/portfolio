@@ -1,49 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 
-function renderMarkdown(text) {
-  const lines = text.split('\n')
-  const out = []
-  let listBuf = []
-
-  const flushList = () => {
-    if (!listBuf.length) return
-    out.push(
-      <ul key={out.length} className="cw-md-list">
-        {listBuf.map((item, i) => <li key={i}>{inlineFormat(item)}</li>)}
-      </ul>
-    )
-    listBuf = []
-  }
-
-  const inlineFormat = (str) => {
-    const parts = str.split(/(\*\*[^*]+\*\*)/g)
-    return parts.map((p, i) =>
-      p.startsWith('**') && p.endsWith('**')
-        ? <strong key={i}>{p.slice(2, -2)}</strong>
-        : p
-    )
-  }
-
-  lines.forEach((line, i) => {
-    const numbered = line.match(/^\d+\.\s+(.+)/)
-    const bulleted  = line.match(/^[-•]\s+(.+)/)
-
-    if (numbered || bulleted) {
-      listBuf.push((numbered || bulleted)[1])
-    } else {
-      flushList()
-      if (line.trim() === '') {
-        if (i > 0) out.push(<br key={out.length} />)
-      } else {
-        out.push(<p key={out.length} className="cw-md-p">{inlineFormat(line)}</p>)
-      }
-    }
-  })
-  flushList()
-  return out
+const WELCOME = {
+  role: 'assistant',
+  content: "Hey! I'm Karan's AI assistant. Ask me anything about his experience, projects, or skills.",
 }
-
-const WELCOME = "Hey! I'm Karan's AI assistant. Ask me anything about his experience, projects, or skills."
 
 const SUGGESTED = [
   "What does Karan do at Deloitte?",
@@ -51,51 +11,87 @@ const SUGGESTED = [
   "What are his strongest skills?",
 ]
 
-function Message({ msg }) {
-  const isUser = msg.role === 'user'
-  return (
-    <div className={`cw-message ${isUser ? 'cw-user' : 'cw-bot'}`}>
-      {!isUser && <span className="cw-avatar">K</span>}
-      <div className="cw-bubble">{isUser ? msg.content : renderMarkdown(msg.content)}</div>
-    </div>
-  )
+function renderMarkdown(text) {
+  const lines = text.split('\n')
+  const out = []
+  let listBuf = []
+
+  const inlineFormat = (str) =>
+    str.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+      p.startsWith('**') && p.endsWith('**')
+        ? <strong key={i} className="cw-bold">{p.slice(2, -2)}</strong>
+        : p
+    )
+
+  const flushList = () => {
+    if (!listBuf.length) return
+    out.push(
+      <ul key={out.length} className="cw-list">
+        {listBuf.map((item, i) => <li key={i} className="cw-list-item">{inlineFormat(item)}</li>)}
+      </ul>
+    )
+    listBuf = []
+  }
+
+  lines.forEach((line, i) => {
+    const numbered = line.match(/^\d+\.\s+(.+)/)
+    const bulleted  = line.match(/^[-•]\s+(.+)/)
+    if (numbered || bulleted) { listBuf.push((numbered || bulleted)[1]); return }
+    flushList()
+    if (line.trim() === '') { if (i > 0) out.push(<div key={out.length} style={{ height: 8 }} />) }
+    else out.push(<p key={out.length} className="cw-paragraph">{inlineFormat(line)}</p>)
+  })
+  flushList()
+  return out
 }
 
 export default function ChatWidget() {
-  const [open,    setOpen]    = useState(false)
-  const [input,   setInput]   = useState('')
-  const [history, setHistory] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState(null)
+  const [open,          setOpen]          = useState(false)
+  const [messages,      setMessages]      = useState([WELCOME])
+  const [input,         setInput]         = useState('')
+  const [loading,       setLoading]       = useState(false)
+  const [showSuggested, setShowSuggested] = useState(true)
+  const [error,         setError]         = useState(null)
   const bottomRef = useRef(null)
+  const inputRef  = useRef(null)
 
   useEffect(() => {
-    if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [history, open, loading])
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, loading])
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 300)
+  }, [open])
 
   const send = async (text) => {
     const q = (text || input).trim()
     if (!q || loading) return
     setInput('')
     setError(null)
+    setShowSuggested(false)
 
     const userMsg = { role: 'user', content: q }
-    const next = [...history, userMsg]
-    setHistory(next)
+    const next    = [...messages, userMsg]
+    setMessages(next)
     setLoading(true)
 
     try {
-      const res = await fetch('http://localhost:8000/chat', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://portfolio-atz1.onrender.com'}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: q, history: history }),
+        body: JSON.stringify({
+          question: q,
+          history: messages.map(m => ({ role: m.role, content: m.content })),
+        }),
       })
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
-      setHistory([...next, { role: 'assistant', content: data.answer }])
-    } catch (e) {
-      setError('Could not reach the chat server. Make sure the backend is running.')
-      setHistory(next.slice(0, -1))
+      setMessages([...next, { role: 'assistant', content: data.answer }])
+    } catch {
+      setMessages([...next, {
+        role: 'assistant',
+        content: "I'm currently in demo mode — the backend isn't connected. When live, I answer questions about Karan's experience and projects using a RAG system grounded in his own documents.",
+      }])
     } finally {
       setLoading(false)
     }
@@ -103,65 +99,78 @@ export default function ChatWidget() {
 
   return (
     <>
-      {/* Floating button */}
-      <button
-        className="cw-fab"
-        onClick={() => setOpen(o => !o)}
-        aria-label={open ? 'Close chat' : 'Chat with Karan\'s AI'}
-      >
-        {open ? '✕' : '◈'}
-      </button>
-
       {/* Panel */}
-      {open && (
-        <div className="cw-panel">
-          <div className="cw-header">
-            <span className="cw-header-dot" />
-            <span>Ask Karan's AI</span>
-          </div>
+      <div className={`cw-panel${open ? ' cw-panel-open' : ''}`}>
+        <div className="cw-header">
+          <div className="cw-header-dot" />
+          <div className="cw-header-title">Ask Karan's AI</div>
+          <div className="cw-header-badge">RAG-powered</div>
+        </div>
 
-          <div className="cw-messages">
-            <div className="cw-message cw-bot">
-              <span className="cw-avatar">K</span>
-              <div className="cw-bubble">{WELCOME}</div>
+        <div className="cw-messages">
+          {messages.map((msg, i) => (
+            <div key={i} className={`cw-msg cw-msg-${msg.role}`}>
+              <div className={`cw-avatar cw-avatar-${msg.role}`}>
+                {msg.role === 'assistant' ? 'K' : '↑'}
+              </div>
+              <div className={`cw-bubble cw-bubble-${msg.role}`}>
+                {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
+              </div>
             </div>
+          ))}
 
-            {history.length === 0 && (
-              <div className="cw-suggestions">
-                {SUGGESTED.map(s => (
-                  <button key={s} className="cw-chip" onClick={() => send(s)}>{s}</button>
+          {loading && (
+            <div className="cw-msg cw-msg-assistant">
+              <div className="cw-avatar cw-avatar-assistant">K</div>
+              <div className="cw-typing">
+                {[0, 150, 300].map(d => (
+                  <span key={d} className="cw-typing-dot" style={{ animationDelay: `${d}ms` }} />
                 ))}
               </div>
-            )}
+            </div>
+          )}
 
-            {history.map((m, i) => <Message key={i} msg={m} />)}
-
-            {loading && (
-              <div className="cw-message cw-bot">
-                <span className="cw-avatar">K</span>
-                <div className="cw-bubble cw-typing">
-                  <span /><span /><span />
-                </div>
-              </div>
-            )}
-
-            {error && <p className="cw-error">{error}</p>}
-            <div ref={bottomRef} />
-          </div>
-
-          <form className="cw-input-row" onSubmit={e => { e.preventDefault(); send() }}>
-            <input
-              className="cw-input"
-              placeholder="Ask something..."
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              disabled={loading}
-              autoFocus
-            />
-            <button className="cw-send" type="submit" disabled={loading || !input.trim()}>→</button>
-          </form>
+          <div ref={bottomRef} />
         </div>
-      )}
+
+        {showSuggested && messages.length === 1 && (
+          <div className="cw-suggestions">
+            {SUGGESTED.map(q => (
+              <button key={q} className="cw-suggestion" onClick={() => send(q)}>{q}</button>
+            ))}
+          </div>
+        )}
+
+        {error && <div className="cw-error">{error}</div>}
+
+        <div className="cw-input-bar">
+          <input
+            ref={inputRef}
+            className="cw-input"
+            placeholder="Ask something..."
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') send() }}
+            disabled={loading}
+          />
+          <button
+            className="cw-send"
+            onClick={() => send()}
+            disabled={loading || !input.trim()}
+          >
+            →
+          </button>
+        </div>
+      </div>
+
+      {/* Trigger */}
+      <button
+        className={`cw-trigger${open ? ' cw-trigger-open' : ''}`}
+        onClick={() => setOpen(o => !o)}
+        aria-label={open ? 'Close chat' : 'Open chat'}
+      >
+        <span className="cw-trigger-icon">{open ? '+' : '◈'}</span>
+      </button>
     </>
   )
 }
