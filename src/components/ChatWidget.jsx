@@ -75,24 +75,37 @@ export default function ChatWidget() {
     setMessages(next)
     setLoading(true)
 
+    const controller = new AbortController()
+    const wakeTimer  = setTimeout(() => {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: '// Waking up the server — this takes ~30s on first load. Hang tight...',
+        isSystem: true,
+      }])
+    }, 6000)
+
     try {
+      const timeoutId = setTimeout(() => controller.abort(), 90000)
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://portfolio-atz1.onrender.com'}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           question: q,
           history: messages.map(m => ({ role: m.role, content: m.content })),
         }),
       })
+      clearTimeout(timeoutId)
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
-      setMessages([...next, { role: 'assistant', content: data.answer }])
+      setMessages([...next.filter(m => !m.isSystem), { role: 'assistant', content: data.answer }])
     } catch {
       setMessages([...next, {
         role: 'assistant',
-        content: "I'm currently in demo mode — the backend isn't connected. When live, I answer questions about Karan's experience and projects using a RAG system grounded in his own documents.",
+        content: "The server didn't respond in time. Please try again — it may have been sleeping.",
       }])
     } finally {
+      clearTimeout(wakeTimer)
       setLoading(false)
     }
   }
