@@ -1,15 +1,9 @@
-import { Suspense, lazy, useEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import useGPU from '../../hooks/useGPU'
 import useReducedMotion from '../../hooks/useReducedMotion'
 import useLazy3D from '../../hooks/useLazy3D'
 import FallbackImage from './FallbackImage'
-
-const isDev = typeof import.meta.env !== 'undefined' && import.meta.env.DEV
-
-const LazyPerf = isDev
-  ? lazy(() => import('r3f-perf').then((module) => ({ default: module.Perf })))
-  : null
 
 /**
  * CanvasWrapper
@@ -106,7 +100,6 @@ export default function CanvasWrapper({
           >
             <Suspense fallback={null}>
               <LazyScene />
-              {LazyPerf && <LazyPerf position="top-left" />}
             </Suspense>
           </Canvas>
         </div>
