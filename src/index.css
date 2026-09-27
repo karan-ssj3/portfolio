@@ -40,7 +40,8 @@ body {
   font-weight: 400;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  /* clip (not hidden) so body never becomes a scroll container */
+  overflow-x: clip;
 }
 
 h1, h2, h3, h4 {
@@ -63,6 +64,27 @@ img {
 
 button {
   cursor: pointer;
+}
+
+/* ============================================================
+   LENIS — smooth scroll owns the window; native smooth scrolling
+   must be off or every Lenis frame becomes an interrupted animation
+   ============================================================ */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
 }
 
 /* ============================================================

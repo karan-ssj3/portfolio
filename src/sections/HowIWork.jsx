@@ -59,6 +59,8 @@ export default function HowIWork() {
       // earlier chips stagger out so the section never ends empty.
       const outChips = chips.slice(0, -1)
 
+      // Window is the default scroller; Lenis drives native window
+      // scrolling and forwards its scroll events to ScrollTrigger.
       const tl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
@@ -67,7 +69,8 @@ export default function HowIWork() {
           scrub: 1,
           pin: true,
           pinSpacing: true,
-          scroller: window,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
         },
       })
 

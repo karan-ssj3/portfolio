@@ -58,28 +58,37 @@ export default function ChatWidget() {
   const [loading,       setLoading]       = useState(false)
   const [showSuggested, setShowSuggested] = useState(true)
   const [error,         setError]         = useState(null)
-  const bottomRef = useRef(null)
+  const messagesRef = useRef(null)
   const inputRef  = useRef(null)
   const panelRef  = useRef(null)
   const triggerRef = useRef(null)
 
+  // Scroll only the messages panel itself — scrollIntoView would also
+  // scroll the page (and fight the page's smooth scroller).
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-    })
+    const el = messagesRef.current
+    if (!el) return
+    if (typeof el.scrollTo === 'function') {
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      })
+    } else {
+      el.scrollTop = el.scrollHeight
+    }
   }, [messages, loading])
 
   useEffect(() => {
     if (open) {
       const delay = prefersReducedMotion() ? 0 : 300
-      const t = setTimeout(() => inputRef.current?.focus(), delay)
+      const t = setTimeout(() => inputRef.current?.focus({ preventScroll: true }), delay)
       return () => clearTimeout(t)
     }
   }, [open])
 
   const closePanel = useCallback(() => {
     setOpen(false)
-    triggerRef.current?.focus()
+    triggerRef.current?.focus({ preventScroll: true })
   }, [])
 
   // Focus trap: keep Tab cycling inside the open panel; Escape closes.
@@ -187,7 +196,13 @@ export default function ChatWidget() {
           </button>
         </div>
 
-        <div className="cw-messages" aria-live="polite" aria-label="Chat messages">
+        <div
+          ref={messagesRef}
+          className="cw-messages"
+          aria-live="polite"
+          aria-label="Chat messages"
+          data-lenis-prevent
+        >
           {messages.map((msg, i) => (
             <div key={i} className={`cw-msg cw-msg-${msg.role}${msg.isSystem ? ' cw-msg-system' : ''}`}>
               <div className={`cw-avatar cw-avatar-${msg.role}`} aria-hidden="true">
@@ -209,8 +224,6 @@ export default function ChatWidget() {
               </div>
             </div>
           )}
-
-          <div ref={bottomRef} />
         </div>
 
         {showSuggested && messages.length === 1 && (

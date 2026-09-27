@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, createContext, useContext, useState } from 'react'
-import ScrollProvider from './providers/ScrollProvider'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import ScrollProvider, { useScrollContext } from './providers/ScrollProvider'
 import SkipLink from './components/SkipLink'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -37,7 +38,16 @@ function ReducedMotionProvider({ children }) {
 
 function ScrollToTop() {
   const { pathname } = useLocation()
-  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  const { getLenis } = useScrollContext()
+  useEffect(() => {
+    // Reset instantly (never a smooth native scroll) and keep Lenis'
+    // internal position in sync so it doesn't pull the page back.
+    const lenis = getLenis?.()
+    if (lenis) lenis.scrollTo(0, { immediate: true, force: true })
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+    const id = requestAnimationFrame(() => ScrollTrigger.refresh())
+    return () => cancelAnimationFrame(id)
+  }, [pathname, getLenis])
   return null
 }
 
@@ -66,7 +76,7 @@ export default function App() {
             }
             .app {
               max-width: 100vw;
-              overflow-x: hidden;
+              overflow-x: clip;
             }
             main {
               outline: none;

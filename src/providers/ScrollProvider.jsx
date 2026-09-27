@@ -4,7 +4,11 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { gsap } from 'gsap'
 import { getGPUTier } from '../lib/gpu'
 
-const ScrollContext = createContext({ reducedMotion: false, gpuTier: 'mid' })
+const ScrollContext = createContext({
+  reducedMotion: false,
+  gpuTier: 'mid',
+  getLenis: () => null,
+})
 
 export const useScrollContext = () => useContext(ScrollContext)
 
@@ -15,21 +19,38 @@ export default function ScrollProvider({ children }) {
   const [gpuTier, setGpuTier] = useState('mid')
   const lenisRef = useRef(null)
   const rafRef = useRef(null)
+  const tierRef = useRef('mid')
+  const getLenisRef = useRef(() => lenisRef.current)
 
   useEffect(() => {
     let cancelled = false
+    let refreshTimer = null
+    let lastHeight = 0
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)')
 
-    const evaluate = async () => {
-      const tier = await getGPUTier()
-      if (cancelled) return
-      setGpuTier(tier)
-      const shouldReduce = prefersReduced.matches || tier === 'low'
-      setReducedMotion(shouldReduce)
+    // Debounced refresh so pin spacers and trigger positions follow
+    // late layout changes (fonts, lazy canvases, images).
+    const scheduleRefresh = () => {
+      clearTimeout(refreshTimer)
+      refreshTimer = setTimeout(() => {
+        if (cancelled) return
+        ScrollTrigger.refresh()
+        lenisRef.current?.resize()
+      }, 150)
+    }
 
-      if (shouldReduce) return
+    const destroyLenis = () => {
+      if (!lenisRef.current) return
+      gsap.ticker.remove(rafRef.current)
+      lenisRef.current.off?.('scroll', ScrollTrigger.update)
+      lenisRef.current.destroy()
+      lenisRef.current = null
+      rafRef.current = null
+    }
 
+    const createLenis = () => {
+      if (lenisRef.current) return
       const lenis = new Lenis({
         lerp: 0.1,
         smoothWheel: true,
@@ -46,36 +67,59 @@ export default function ScrollProvider({ children }) {
       }
       rafRef.current = raf
       gsap.ticker.add(raf)
+      scheduleRefresh()
+    }
+
+    const evaluate = async () => {
+      const tier = await getGPUTier()
+      if (cancelled) return
+      tierRef.current = tier
+      setGpuTier(tier)
+      const shouldReduce = prefersReduced.matches || tier === 'low'
+      setReducedMotion(shouldReduce)
+
+      if (shouldReduce) return
+      createLenis()
     }
 
     evaluate()
 
     const onMediaChange = (e) => {
-      const shouldReduce = e.matches || gpuTier === 'low'
+      const shouldReduce = e.matches || tierRef.current === 'low'
       setReducedMotion(shouldReduce)
-      if (e.matches && lenisRef.current) {
-        gsap.ticker.remove(rafRef.current)
-        lenisRef.current.destroy()
-        lenisRef.current = null
-        rafRef.current = null
-      }
+      if (shouldReduce) destroyLenis()
+      else createLenis()
+      scheduleRefresh()
     }
     prefersReduced.addEventListener('change', onMediaChange)
 
+    const ro = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => {
+          const h = document.body.scrollHeight
+          if (h === lastHeight) return
+          lastHeight = h
+          scheduleRefresh()
+        })
+      : null
+    ro?.observe(document.body)
+
+    window.addEventListener('load', scheduleRefresh)
+    document.fonts?.ready?.then(scheduleRefresh).catch(() => {})
+
     return () => {
       cancelled = true
+      clearTimeout(refreshTimer)
+      ro?.disconnect()
+      window.removeEventListener('load', scheduleRefresh)
       prefersReduced.removeEventListener('change', onMediaChange)
-      if (lenisRef.current) {
-        gsap.ticker.remove(rafRef.current)
-        lenisRef.current.destroy()
-        lenisRef.current = null
-        rafRef.current = null
-      }
+      destroyLenis()
     }
-  }, [gpuTier])
+  }, [])
 
   return (
-    <ScrollContext.Provider value={{ reducedMotion, gpuTier }}>
+    <ScrollContext.Provider
+      value={{ reducedMotion, gpuTier, getLenis: getLenisRef.current }}
+    >
       {children}
     </ScrollContext.Provider>
   )
