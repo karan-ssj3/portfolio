@@ -3,11 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Karan Bhutani — AI & Data Consultant</title>
-    <meta name="description" content="AI and Data Consultant at Deloitte. Building RAG systems, autonomous agents, and data platforms." />
+    <title>Karan Bhutani</title>
+    <meta
+      name="description"
+      content="AI and Data Consultant at Deloitte. Building RAG systems, autonomous agents, and data platforms."
+    />
+
+    <!-- Font preconnect for Space Grotesk + Inter delivery. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- Cloudflare Web Analytics beacon: only injected when VITE_CF_BEACON_TOKEN is set. -->
+    <script type="module">
+      const token = import.meta.env.VITE_CF_BEACON_TOKEN;
+      if (token) {
+        const s = document.createElement('script');
+        s.defer = true;
+        s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+        s.setAttribute('data-cf-beacon', JSON.stringify({ token }));
+        document.head.appendChild(s);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
