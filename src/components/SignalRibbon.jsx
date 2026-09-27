@@ -10,6 +10,8 @@ import '../styles/signal-ribbon.css'
 const SVGNS = 'http://www.w3.org/2000/svg'
 const BASE_SPEED = 40
 const BAR_COUNT = 14
+const TOKEN_GAP = 28
+const MAX_PENDING = 3
 const FRAGMENTS = ['um, so the call', 'refund? maybe', 'ref 4471 ...']
 
 // Project titles shortened to their first title words (2-4 words).
@@ -114,19 +116,41 @@ export default function SignalRibbon() {
       tokens: [], pending: 0, next: 0, prevEnv: 0, sinceSpawn: 0,
       bars: new Float32Array(BAR_COUNT), raf: 0, last: 0,
       inView: true, lastY: window.scrollY,
+      widths: new Map(),
     }
 
-    const makeToken = (d) => {
-      const label = ITEMS[st.next % ITEMS.length]
-      st.next++
+    const buildEl = (label) => {
       const el = document.createElement('span')
       el.className = 'signal-ribbon__token'
       el.appendChild(document.createTextNode(label))
       const g = document.createElement('i')
       g.textContent = '\u2726'
       el.appendChild(g)
+      return el
+    }
+
+    // Rendered width (label plus sparkle separator), cached per label.
+    const measure = (label) => {
+      const cached = st.widths.get(label)
+      if (cached !== undefined) return cached
+      const el = buildEl(label)
+      el.style.visibility = 'hidden'
       tokensRef.current.appendChild(el)
-      const tok = { el, w: el.offsetWidth, d, sharp: false }
+      const w = el.offsetWidth
+      el.remove()
+      st.widths.set(label, w)
+      return w
+    }
+
+    const nextLabel = () => ITEMS[st.next % ITEMS.length]
+
+    const makeToken = (d) => {
+      const label = nextLabel()
+      st.next++
+      const w = measure(label)
+      const el = buildEl(label)
+      tokensRef.current.appendChild(el)
+      const tok = { el, w, d, sharp: false }
       st.tokens.push(tok)
       if (chipTextRef.current) chipTextRef.current.textContent = `Extracted: ${label}`
       return tok
@@ -144,25 +168,29 @@ export default function SignalRibbon() {
       }
     }
 
-    const gap = () => (st.mobile ? 60 : 8)
+    // A new token spawns at d=0 spanning [0, w]; the previous tail must clear
+    // it by TOKEN_GAP and also sit TOKEN_GAP past the pill exit.
+    const canEmit = () => {
+      const head = st.tokens[st.tokens.length - 1]
+      if (!head) return true
+      const w = measure(nextLabel())
+      const need = Math.max(w + TOKEN_GAP, st.pillW / 2 + TOKEN_GAP)
+      return head.d >= need
+    }
 
     const seed = () => {
       tokensRef.current.textContent = ''
       st.tokens = []
       let d = st.band.len - 10
-      const made = []
-      while (d > 0) {
-        const tok = makeToken(0)
-        made.push(tok)
-        d -= tok.w + gap()
-        tok.d = d + tok.w + gap()
-      }
-      // Reorder so the most recent is closest to the pill.
-      made.forEach((tok) => {
-        tok.d -= tok.w + gap()
-        if (tok.d < 0) tok.d = 0
+      while (true) {
+        const w = measure(nextLabel())
+        const start = d - w
+        if (start < 0) break
+        const tok = makeToken(start)
         placeToken(tok)
-      })
+        d = start - TOKEN_GAP
+      }
+      // Most recent is closest to the pill (last in queue).
       st.tokens.sort((a, b) => b.d - a.d)
     }
 
@@ -173,6 +201,7 @@ export default function SignalRibbon() {
       st.W = W
       st.H = H
       st.mobile = W < 640
+      st.widths.clear()
       const dpr = Math.min(2, window.devicePixelRatio || 1)
       canvas.width = Math.round(W * dpr)
       canvas.height = Math.round(H * dpr)
@@ -283,23 +312,24 @@ export default function SignalRibbon() {
         st.sinceSpawn += dt
         const eP = draw()
         if ((st.prevEnv < 0.55 && eP >= 0.55) || st.sinceSpawn > 7) {
-          st.pending = Math.min(3, st.pending + 1)
+          st.pending = Math.min(MAX_PENDING, st.pending + 1)
           st.sinceSpawn = 0
         }
         st.prevEnv = eP
-        const head = st.tokens[st.tokens.length - 1]
-        if (st.pending > 0 && (!head || head.d >= head.w + gap())) {
-          st.pending--
-          makeToken(0)
-        }
+        // All tokens share one velocity so spacing is preserved under boost.
         for (let i = st.tokens.length - 1; i >= 0; i--) {
           const tok = st.tokens[i]
           tok.d += v * dt
           if (tok.d > st.band.len) {
             tok.el.remove()
             st.tokens.splice(i, 1)
-          } else placeToken(tok)
+          }
         }
+        if (st.pending > 0 && canEmit()) {
+          st.pending--
+          makeToken(0)
+        }
+        st.tokens.forEach(placeToken)
       }
       st.raf = requestAnimationFrame(tick)
     }
