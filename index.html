@@ -3,14 +3,88 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Karan Bhutani — AI & Data Consultant</title>
-    <meta name="description" content="AI and Data Consultant at Deloitte. Building RAG systems, autonomous agents, and data platforms." />
+    <title>Karan Bhutani · AI Engineer</title>
+    <meta
+      name="description"
+      content="AI Engineer at Neilson Financial Services. Building compliance agents, LLM extraction pipelines and Databricks apps."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" href="/favicon.svg" />
+    <meta name="theme-color" content="#FFFFEB" />
+
+    <!-- Font preconnects (fonts are self-hosted via fontsource; kept harmless). -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+    <!-- Critical CSS for the static hero shell (mirrors Hero.jsx, PillButton, Navbar). -->
+    <style>
+      html, body { margin: 0; background: #FFFFEB; color: #1A1A1A; }
+      body { font-family: 'Figtree', system-ui, sans-serif; font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+      .ss-nav { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 50; box-sizing: border-box; width: calc(100% - 24px); max-width: 960px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #FFFFEB; border: 1px solid rgba(26,26,26,.1); border-radius: 999px; padding: 8px 8px 8px 20px; }
+      .ss-mono { font-weight: 600; letter-spacing: .12em; text-decoration: none; color: #1A1A1A; }
+      .ss-mono span { color: #FFA946; }
+      .ss-links { display: flex; gap: 4px; }
+      .ss-links a { color: #1A1A1A; text-decoration: none; padding: 8px 14px; border-radius: 999px; }
+      @media (max-width: 719px) { .ss-links { display: none; } }
+      .ss-hero { position: relative; width: 100%; min-height: 100vh; min-height: 100svh; background: #FFFFEB; color: #1A1A1A; overflow: hidden; padding-bottom: 96px; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
+      .ss-inner { position: relative; width: 100%; max-width: 72rem; margin: 0 auto; padding: clamp(7rem, 14vh, 9rem) clamp(1.25rem, 5vw, 4rem) 0; box-sizing: border-box; }
+      .ss-hero .eyebrow { margin: 0 0 1.25rem; font-size: 12px; text-transform: uppercase; letter-spacing: .14em; font-weight: 600; opacity: .6; }
+      .ss-hero .hero-heading { font-family: system-ui, sans-serif; font-weight: 600; letter-spacing: -0.02em; line-height: 0.95; margin: 0; font-size: clamp(3rem, 8.5vw, 6.5rem); max-width: 100%; }
+      .ss-hero .hero-heading-line { display: block; white-space: nowrap; }
+      @media (max-width: 480px) { .ss-hero .hero-heading { font-size: clamp(2.25rem, 10.5vw, 3.5rem); } }
+      .ss-hero .lede { margin: 1.5rem 0 0; max-width: 44ch; font-size: 20px; line-height: 26px; font-weight: 500; }
+      .ss-ctas { margin-top: 2.5rem; display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+      .ss-pill { display: inline-flex; align-items: center; box-sizing: border-box; padding: 12px 22px; border-radius: 999px; font-size: 16px; font-weight: 500; line-height: 1.5; text-decoration: none; color: #1A1A1A; border: 1px solid #1A1A1A; }
+      .ss-pill-primary { background: #F0D7FF; }
+      .ss-pill-outline { background: transparent; border-color: currentColor; }
+      /* Ribbon reserve: SignalRibbon is a width-100% SVG with viewBox 1200x160, so reserve the same ratio. */
+      .ss-ribbon { width: 100%; margin-top: clamp(1.5rem, 4vh, 3rem); height: 13.333vw; }
+      @supports (aspect-ratio: 1 / 1) { .ss-ribbon { height: auto; aspect-ratio: 1200 / 160; } }
+    </style>
+
+    <!-- Cloudflare Web Analytics beacon: only injected on the production host when VITE_CF_BEACON_TOKEN is set. -->
+    <script type="module">
+      const token = import.meta.env.VITE_CF_BEACON_TOKEN;
+      const host = location.hostname;
+      const isProd = host === 'karanbhutani.com' || host === 'www.karanbhutani.com';
+      if (token && isProd) {
+        const s = document.createElement('script');
+        s.defer = true;
+        s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+        s.setAttribute('data-cf-beacon', JSON.stringify({ token }));
+        document.head.appendChild(s);
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Static hero shell: replaced by React on mount (createRoot, no hydration). -->
+      <nav class="ss-nav" aria-label="Primary">
+        <a class="ss-mono" href="/">k<span>·</span>b</a>
+        <div class="ss-links">
+          <a href="/">Home</a>
+          <a href="/projects">Projects</a>
+          <a href="/experience">Experience</a>
+          <a href="/blog">Blog</a>
+        </div>
+        <a class="ss-pill ss-pill-primary" href="/contact">Contact</a>
+      </nav>
+      <section id="hero" class="ss-hero" data-tone="cream" aria-labelledby="hero-heading">
+        <div class="ss-inner">
+          <p class="eyebrow">Karan Bhutani · Portfolio</p>
+          <h1 id="hero-heading" class="hero-heading">
+            <span class="hero-heading-line">ALL-ROUNDER</span>
+            <span class="hero-heading-line">AI ENGINEER</span>
+          </h1>
+          <p class="lede hero-lede">Pipelines, models, and AI systems: designed, built, evaluated, and shipped.</p>
+          <div class="ss-ctas">
+            <a class="ss-pill ss-pill-primary" href="/contact">Contact</a>
+            <a class="ss-pill ss-pill-outline" href="/projects">Projects</a>
+          </div>
+        </div>
+        <div class="ss-ribbon" aria-hidden="true"></div>
+      </section>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

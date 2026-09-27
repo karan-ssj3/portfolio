@@ -29,7 +29,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
     steps:
@@ -47,6 +47,8 @@ jobs:
 
       - name: Build site
         run: npm run build
+        env:
+          VITE_CF_BEACON_TOKEN: ${{ vars.VITE_CF_BEACON_TOKEN }}
 
       - name: Verify build output
         run: |
@@ -56,6 +58,12 @@ jobs:
               exit 1
             fi
           done
+
+      # Gate deploys on Lighthouse mobile budgets; thresholds live in lighthouserc.json.
+      - name: Run Lighthouse CI (mobile)
+        run: |
+          npx --yes @lhci/cli@0.14.0 collect
+          npx --yes @lhci/cli@0.14.0 assert
 
       - name: List FTP root and target dir (dry run only)
         if: ${{ env.DRY_RUN == 'true' }}

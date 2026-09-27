@@ -1,163 +1,244 @@
-import { useState, useRef, useEffect } from 'react'
 import { PROJECTS } from '../data/projects'
+import Section from '../components/Section'
+import PillButton from '../components/PillButton'
 
-const ACCENT_MAP = {
-  c: { color: 'var(--accent)',  light: 'var(--accent-light)',  border: 'rgba(79,70,229,.2)',  css: 'var(--accent)' },
-  p: { color: 'var(--purple)',  light: 'var(--purple-light)',  border: 'rgba(139,92,246,.2)', css: 'var(--purple)' },
-  m: { color: 'var(--teal)',    light: 'var(--teal-light)',    border: 'rgba(13,148,136,.2)', css: 'var(--teal)' },
+// Page-scoped styles, injected once alongside the page (tokens from index.css).
+const PROJECTS_CSS = `
+.projects-hero {
+  padding-top: 160px;
+  padding-bottom: 96px;
+  overflow: visible;
 }
-
-function PatternSVG({ type, colors }) {
-  const c = colors.css
-  const patterns = {
-    circles: (
-      <svg viewBox="0 0 400 160" style={{ width: '100%', height: '100%' }}>
-        <circle cx="320" cy="80" r="90" fill="none" stroke={c} strokeWidth="1" opacity=".15" />
-        <circle cx="320" cy="80" r="60" fill="none" stroke={c} strokeWidth="1" opacity=".2" />
-        <circle cx="320" cy="80" r="30" fill="none" stroke={c} strokeWidth="1.5" opacity=".3" />
-        <circle cx="320" cy="80" r="4" fill={c} opacity=".5" />
-        <circle cx="80" cy="120" r="50" fill="none" stroke={c} strokeWidth=".5" opacity=".1" />
-        <line x1="80" y1="120" x2="320" y2="80" stroke={c} strokeWidth=".5" opacity=".08" strokeDasharray="4 6" />
-      </svg>
-    ),
-    diagonal: (
-      <svg viewBox="0 0 400 160" style={{ width: '100%', height: '100%' }}>
-        {Array.from({ length: 12 }).map((_, i) => (
-          <line key={i} x1={i*40-40} y1="180" x2={i*40+120} y2="-20" stroke={c} strokeWidth=".8" opacity={.04+(i%3)*.03} />
-        ))}
-        <rect x="300" y="40" width="60" height="60" rx="4" fill="none" stroke={c} strokeWidth="1.2" opacity=".2" transform="rotate(15 330 70)" />
-      </svg>
-    ),
-    grid: (
-      <svg viewBox="0 0 400 160" style={{ width: '100%', height: '100%' }}>
-        {Array.from({ length: 8  }).map((_, i) => <line key={`h${i}`} x1="0"   y1={i*24+10}  x2="400" y2={i*24+10}  stroke={c} strokeWidth=".5" opacity=".06" />)}
-        {Array.from({ length: 16 }).map((_, i) => <line key={`v${i}`} x1={i*28+10} y1="0" x2={i*28+10} y2="160" stroke={c} strokeWidth=".5" opacity=".06" />)}
-        <rect x="260" y="34" width="96" height="72" rx="6" fill={c} opacity=".06" />
-        <circle cx="308" cy="70" r="18" fill="none" stroke={c} strokeWidth="1" opacity=".2" />
-      </svg>
-    ),
-    waves: (
-      <svg viewBox="0 0 400 160" style={{ width: '100%', height: '100%' }}>
-        {[40,70,100,130].map((y, i) => (
-          <path key={i} d={`M0 ${y} Q100 ${y-20+i*5} 200 ${y} T400 ${y}`} fill="none" stroke={c} strokeWidth=".8" opacity={.06+i*.03} />
-        ))}
-        <circle cx="340" cy="60" r="24" fill="none" stroke={c} strokeWidth="1.2" opacity=".15" />
-      </svg>
-    ),
-    dots: (
-      <svg viewBox="0 0 400 160" style={{ width: '100%', height: '100%' }}>
-        {Array.from({ length: 120 }).map((_, i) => {
-          const x = (i%15)*28+10, y = Math.floor(i/15)*22+10
-          const dist = Math.sqrt((x-320)**2+(y-80)**2)
-          return <circle key={i} cx={x} cy={y} r={dist<60?2.5:dist<100?1.5:1} fill={c} opacity={dist<60?.25:dist<100?.12:.05} />
-        })}
-      </svg>
-    ),
-    mesh: (
-      <svg viewBox="0 0 400 160" style={{ width: '100%', height: '100%' }}>
-        <polygon points="310,30 360,80 310,130 260,80" fill="none" stroke={c} strokeWidth="1" opacity=".12" />
-        <polygon points="310,50 340,80 310,110 280,80" fill="none" stroke={c} strokeWidth=".8" opacity=".18" />
-        {[0,1,2,3,4].map(i => (
-          <line key={i} x1={50+i*30} y1={20+i*25} x2={150+i*20} y2={80+i*15} stroke={c} strokeWidth=".6" opacity=".07" />
-        ))}
-      </svg>
-    ),
-  }
-  return patterns[type] || patterns.circles
+.projects-hero__title {
+  margin: 0;
+  color: #FFFFEB;
+  line-height: 1.05;
+  padding-bottom: 0.08em;
 }
-
-const PATTERNS = ['circles','diagonal','grid','waves','dots','mesh']
-
-const FILTER_MAP = {
-  All:    () => true,
-  Agents: p => /agent|trading|classif/i.test(p.title),
-  RAG:    p => /rag|tax|financial/i.test(p.title),
-  ML:     p => /ml|time.series|classif/i.test(p.title),
+.projects-list {
+  padding: 96px 0 120px;
 }
+.proj-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.proj-grid > li {
+  margin: 0;
+  min-width: 0;
+}
+.proj-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+  background-color: #FFFFEB;
+  color: #1A1A1A;
+  border: 1px solid rgba(26, 26, 26, 0.1);
+  border-radius: var(--radius-card, 24px);
+  padding: 28px;
+  overflow-wrap: anywhere;
+  transition: background-color 180ms var(--ease-out);
+}
+.proj-card:hover,
+.proj-card:focus-within {
+  background-color: #F0D7FF;
+}
+.proj-card__metric {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+.proj-card__dash {
+  flex: none;
+  display: inline-block;
+  width: 24px;
+  height: 2px;
+  background: #FFA946;
+}
+.proj-card__subtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  min-height: 2.8em;
+  color: rgba(26, 26, 26, 0.78);
+}
+.proj-card__title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+.proj-card__desc {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.proj-card__tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.proj-card__tag {
+  font-size: 13px;
+  line-height: 1.3;
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: #1A1A1A;
+  background: transparent;
+  border: 1px solid rgba(26, 26, 26, 0.15);
+}
+.proj-card__links {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 8px;
+}
+.proj-card__link {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1A1A1A;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(26, 26, 26, 0.3);
+}
+.proj-card__link:hover {
+  border-bottom-color: #1A1A1A;
+}
+.proj-cta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  height: 100%;
+  box-sizing: border-box;
+  background-color: #F0D7FF;
+  color: #1A1A1A;
+  border: 1px solid #1A1A1A;
+  border-radius: var(--radius-card, 24px);
+  padding: 28px;
+}
+.proj-cta__title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+.proj-cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+@media (min-width: 1025px) {
+  .proj-grid__cta--hidden { display: none; }
+}
+@media (max-width: 1024px) {
+  .proj-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .proj-grid > li.proj-grid__cta { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 640px) {
+  .projects-hero { padding-bottom: 64px; }
+  .projects-list { padding: 64px 0 96px; }
+  .proj-grid { grid-template-columns: minmax(0, 1fr); }
+}
+`
 
-function ProjectCard({ p, index, pattern }) {
-  const ref = useRef(null)
-  const [visible, setVisible] = useState(false)
-  const colors = ACCENT_MAP[p.accent]
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } },
-      { threshold: 0.15 }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
+function ProjectCard({ project }) {
+  // Only render a metric if the data carries one; never derive it from copy.
+  const metric = project.metric ?? project.impact
+  const tags = Array.isArray(project.techStack) ? project.techStack : []
 
   return (
-    <div
-      ref={ref}
-      className={`proj-card${visible ? ' proj-visible' : ''}`}
-      style={{
-        animationDelay: `${(index % 2) * 100}ms`,
-        '--proj-accent': colors.css,
-        '--proj-light':  colors.light,
-        '--proj-border': colors.border,
-      }}
-    >
-      <div className="proj-header">
-        <PatternSVG type={pattern} colors={colors} />
-        <div className="proj-number">{String(index + 1).padStart(2, '0')}</div>
-      </div>
+    <article className="proj-card">
+      {metric && (
+        <p className="proj-card__metric display d-48">
+          <span className="proj-card__dash" aria-hidden="true" />
+          <span>{metric}</span>
+        </p>
+      )}
 
-      <div className="proj-body">
-        <h3 className="proj-title">{p.title}</h3>
-        {p.subtitle && <p className="proj-subtitle">{p.subtitle}</p>}
-        <p className="proj-desc">{p.description}</p>
-        <div className="proj-tech">
-          {p.techStack.map(t => <span key={t} className="proj-tech-badge">{t}</span>)}
+      <p className="proj-card__subtitle">{project.subtitle || ''}</p>
+      <h2 className="proj-card__title display">{project.title}</h2>
+      {project.description && <p className="proj-card__desc">{project.description}</p>}
+
+      {tags.length > 0 && (
+        <ul className="proj-card__tags" aria-label="Tech stack">
+          {tags.map((t) => (
+            <li key={t} className="proj-card__tag">{t}</li>
+          ))}
+        </ul>
+      )}
+
+      {(project.github || project.demo) && (
+        <div className="proj-card__links">
+          {project.github && (
+            <a href={project.github} target="_blank" rel="noopener noreferrer" className="proj-card__link">
+              View on GitHub
+            </a>
+          )}
+          {project.demo && (
+            <a href={project.demo} target="_blank" rel="noopener noreferrer" className="proj-card__link">
+              Live demo
+            </a>
+          )}
         </div>
-        {p.github && (
-          <a href={p.github} target="_blank" rel="noreferrer" className="proj-link">
-            View on GitHub <span className="proj-link-arrow">→</span>
-          </a>
-        )}
+      )}
+    </article>
+  )
+}
+
+function CtaCard() {
+  return (
+    <div className="proj-cta">
+      <p className="proj-cta__title display">More on GitHub</p>
+      <div className="proj-cta__actions">
+        <PillButton variant="outline" href="https://github.com/karan-ssj3">GitHub</PillButton>
+        <PillButton variant="primary" href="/contact">Contact</PillButton>
       </div>
     </div>
   )
 }
 
 export default function Projects() {
-  const [filter, setFilter] = useState('All')
-  const filtered = PROJECTS.filter(FILTER_MAP[filter] || FILTER_MAP.All)
+  const rem = PROJECTS.length % 3
+  const ctaStyle = rem === 0 ? undefined : { gridColumn: `span ${3 - rem}` }
+  // At 3 columns a full last row needs no CTA; it stays full-width at 2 and 1 columns.
+  const ctaClass = rem === 0 ? 'proj-grid__cta proj-grid__cta--hidden' : 'proj-grid__cta'
 
   return (
-    <>
-      <div className="page-hero">
-        <div className="page-label">// Portfolio</div>
-        <h1 className="page-title">Projects</h1>
-        <p className="page-subtitle">AI systems, RAG pipelines, and data engineering at scale</p>
+    <div className="page page--projects">
+      <style>{PROJECTS_CSS}</style>
 
-        <div className="filter-pills" style={{ marginTop: '2rem' }}>
-          {Object.keys(FILTER_MAP).map(f => (
-            <button
-              key={f}
-              className={`filter-pill${filter === f ? ' filter-active' : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {f}
-            </button>
-          ))}
+      <Section tone="teal" roundedBottom className="projects-hero" as="header">
+        <div className="wrap">
+          <h1 className="projects-hero__title display d-96">
+            Selected <em>work.</em>
+          </h1>
         </div>
-      </div>
+      </Section>
 
-      <div className="proj-grid">
-        {filtered.map((p, i) => (
-          <ProjectCard
-            key={p.id}
-            p={p}
-            index={i}
-            pattern={PATTERNS[p.id - 1] || 'circles'}
-          />
-        ))}
-      </div>
-    </>
+      <Section tone="cream" className="projects-list" aria-label="Project list">
+        <div className="wrap">
+          <ul className="proj-grid">
+            {PROJECTS.map((p) => (
+              <li key={p.id}>
+                <ProjectCard project={p} />
+              </li>
+            ))}
+            <li className={ctaClass} style={ctaStyle}>
+              <CtaCard />
+            </li>
+          </ul>
+        </div>
+      </Section>
+    </div>
   )
 }

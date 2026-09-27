@@ -1,161 +1,61 @@
-import { useState, useRef, useEffect } from 'react'
-import { EXPERIENCE } from '../data/experience'
+import Section from '../components/Section'
+import ExperienceTimeline from '../sections/ExperienceTimeline'
 
-const ACCENT_MAP = {
-  accent: { color: 'var(--accent)',  light: 'var(--accent-light)',  border: 'rgba(79,70,229,.2)',  css: 'var(--accent)' },
-  purple: { color: 'var(--purple)',  light: 'var(--purple-light)',  border: 'rgba(139,92,246,.2)', css: 'var(--purple)' },
-  teal:   { color: 'var(--teal)',    light: 'var(--teal-light)',    border: 'rgba(13,148,136,.2)', css: 'var(--teal)' },
+// Page-scoped layout rules: slab padding, radius on the slab itself, and a
+// single source of top spacing for the timeline (its own top gap is reset).
+const css = `
+.page--experience { background: #FFFFEB; overflow-x: clip; }
+.page--experience .exp-slab {
+  padding-top: 140px;
+  padding-bottom: 72px;
+  border-radius: 0 0 var(--radius-slab, 48px) var(--radius-slab, 48px);
+  background: #1A1A1A;
+  background-clip: padding-box;
+  margin-top: 0;
+  margin-bottom: 0;
 }
-
-const CERTS = [
-  { name: 'Anthropic MCP — Intro & Advanced',  year: '2025', accent: 'accent' },
-  { name: 'CrewAI Multi-Agent Systems',         year: '2025', accent: 'purple' },
-  { name: 'AWS ML Engineer',                    year: '2025', accent: 'teal' },
-  { name: 'Databricks Data Engineer Associate', year: 'In Progress', accent: 'accent' },
-  { name: 'DeepLearning.AI: Evaluating GenAI',  year: '2024', accent: 'purple' },
-  { name: 'Google: Power of Statistics',        year: '2024', accent: 'teal' },
-]
-
-function TimelineCard({ exp, index, isLast }) {
-  const ref = useRef(null)
-  const [visible, setVisible] = useState(false)
-  const colors = ACCENT_MAP[exp.accent]
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } },
-      { threshold: 0.12 }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-
-  return (
-    <div
-      ref={ref}
-      className={`tl-item${visible ? ' tl-visible' : ''}`}
-      style={{ animationDelay: `${index * 150}ms` }}
-    >
-      <div className="tl-spine">
-        <div
-          className="tl-node"
-          style={{ background: colors.css, boxShadow: `0 0 0 4px ${colors.light}` }}
-        >
-          {exp.current && <div className="tl-pulse" style={{ borderColor: colors.css }} />}
-        </div>
-        {!isLast && <div className="tl-line" />}
-      </div>
-
-      <div
-        className="tl-card"
-        style={{
-          '--tl-accent': colors.css,
-          '--tl-light':  colors.light,
-          '--tl-border': colors.border,
-        }}
-      >
-        <div className="tl-card-header">
-          <div>
-            <h3 className="tl-title">{exp.title}</h3>
-            <div className="tl-company">{exp.company}</div>
-          </div>
-          <div className="tl-card-header-right">
-            <span
-              className="tl-date-badge"
-              style={{ color: colors.css, background: colors.light, borderColor: colors.css }}
-            >
-              {exp.startDate} – {exp.endDate}
-            </span>
-            <span className="tl-location">{exp.location}</span>
-          </div>
-        </div>
-
-        <div className="tl-divider" style={{ background: `linear-gradient(90deg, ${colors.border}, transparent)` }} />
-
-        <ul className="tl-desc-list">
-          {exp.description.map((item, i) => (
-            <li key={i} className="tl-desc-item">
-              <span className="tl-desc-dot" style={{ background: colors.css }} />
-              {item}
-            </li>
-          ))}
-        </ul>
-
-        <div className="tl-tech-row">
-          <span className="tl-tech-label">// Tech Stack</span>
-          <div className="tl-tech-badges">
-            {exp.techStack.map(t => (
-              <span
-                key={t}
-                className="tl-tech-badge"
-                style={{ color: colors.css, background: colors.light, borderColor: colors.border }}
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+.page--experience .exp-slab > .wrap {
+  background: transparent;
+  padding-inline: max(20px, clamp(20px, 4vw, 48px));
 }
-
-function CertCard({ cert, index }) {
-  const colors = ACCENT_MAP[cert.accent]
-  return (
-    <div
-      className="cert-card"
-      style={{
-        '--cert-accent': colors.css,
-        '--cert-light':  colors.light,
-        '--cert-border': colors.border,
-        animationDelay: `${index * 80}ms`,
-      }}
-    >
-      <div className="cert-dot" style={{ background: colors.css }} />
-      <div>
-        <div className="cert-name">{cert.name}</div>
-        <div className="cert-year">{cert.year}</div>
-      </div>
-    </div>
-  )
+.page--experience .exp-slab h1 {
+  margin: 0;
+  color: #FFFFEB;
+  padding-right: 0.06em;
+  overflow-wrap: break-word;
 }
+.page--experience .exp-timeline { padding-top: 64px; }
+.page--experience .exp-timeline > :first-child,
+.page--experience .exp-timeline .experience-timeline,
+.page--experience .exp-timeline .timeline {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+@media (max-width: 640px) {
+  .page--experience .exp-slab {
+    padding-top: 124px;
+    padding-bottom: 48px;
+    border-radius: 0 0 32px 32px;
+  }
+  .page--experience .exp-timeline { padding-top: 40px; }
+}
+`
 
 export default function Experience() {
   return (
-    <>
-      <div className="page-hero">
-        <div className="page-label">// Career Journey</div>
-        <h1 className="page-title">Experience</h1>
-        <p className="page-subtitle">Building AI-powered solutions for enterprise clients across Australia</p>
-      </div>
-
-      <section className="timeline-section">
-        {EXPERIENCE.map((exp, i) => (
-          <TimelineCard
-            key={exp.id}
-            exp={exp}
-            index={i}
-            isLast={i === EXPERIENCE.length - 1}
-          />
-        ))}
-      </section>
-
-      <div className="section-divider" style={{ maxWidth: 860, margin: '0 auto 48px', padding: '0 24px' }}>
-        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, var(--border), transparent)' }} />
-      </div>
-
-      <section className="cert-section">
-        <div className="cert-header">
-          <div className="page-label" style={{ marginBottom: 12 }}>// Credentials</div>
-          <h2 className="cert-heading">Certifications</h2>
+    <div className="page page--experience">
+      <style>{css}</style>
+      <Section tone="ink" as="header" className="exp-slab">
+        <div className="wrap">
+          <h1 className="display d-96">
+            Where I’ve <em>worked.</em>
+          </h1>
         </div>
-        <div className="cert-grid">
-          {CERTS.map((cert, i) => <CertCard key={cert.name} cert={cert} index={i} />)}
-        </div>
-      </section>
-    </>
+      </Section>
+
+      <div className="exp-timeline">
+        <ExperienceTimeline showHeader={false} />
+      </div>
+    </div>
   )
 }
