@@ -8,11 +8,15 @@ const ROUTE_LINKS = [
   { to: '/blog', label: 'Blog' },
 ]
 
-const HOME_ANCHORS = [
+const HOME_LINKS = [
   { to: '#hero', label: 'Home' },
+  { to: '#how-i-work', label: 'How I Work' },
   { to: '#projects', label: 'Projects' },
+  { to: '#tech-stack', label: 'Tech Stack' },
+  { to: '#process', label: 'Process' },
   { to: '#experience', label: 'Experience' },
-  { to: '#blog', label: 'Blog' },
+  { to: '#faq', label: 'FAQ' },
+  { to: '/blog', label: 'Blog' },
 ]
 
 export default function Navbar() {
@@ -35,7 +39,7 @@ export default function Navbar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const links = isHome ? HOME_ANCHORS : ROUTE_LINKS
+  const links = isHome ? HOME_LINKS : ROUTE_LINKS
 
   const handleAnchorClick = (e, href) => {
     e.preventDefault()
@@ -73,6 +77,7 @@ export default function Navbar() {
                 to={to}
                 end={to === '/'}
                 className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
+                onClick={() => setMobileOpen(false)}
               >
                 {label}
               </NavLink>
@@ -81,9 +86,19 @@ export default function Navbar() {
         ))}
       </ul>
 
-      <NavLink to="/contact" className="nav-cta">
-        Let's talk
-      </NavLink>
+      {isHome ? (
+        <a
+          href="#cta"
+          className="nav-cta"
+          onClick={(e) => handleAnchorClick(e, '#cta')}
+        >
+          Let's talk
+        </a>
+      ) : (
+        <NavLink to="/contact" className="nav-cta" onClick={() => setMobileOpen(false)}>
+          Let's talk
+        </NavLink>
+      )}
 
       <button
         className="nav-hamburger"
@@ -123,9 +138,19 @@ export default function Navbar() {
               </li>
             ))}
           </ul>
-          <NavLink to="/contact" className="nav-mobile-cta" onClick={() => setMobileOpen(false)}>
-            Let's talk
-          </NavLink>
+          {isHome ? (
+            <a
+              href="#cta"
+              className="nav-mobile-cta"
+              onClick={(e) => handleAnchorClick(e, '#cta')}
+            >
+              Let's talk
+            </a>
+          ) : (
+            <NavLink to="/contact" className="nav-mobile-cta" onClick={() => setMobileOpen(false)}>
+              Let's talk
+            </NavLink>
+          )}
         </div>
       )}
     </nav>
