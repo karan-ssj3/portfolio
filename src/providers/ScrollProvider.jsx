@@ -37,20 +37,12 @@ export default function ScrollProvider({ children }) {
       })
       lenisRef.current = lenis
 
-      ScrollTrigger.scrollerProxy(window, {
-        scrollTop(value) {
-          if (arguments.length === 0) return lenis.scroll
-          lenis.scrollTo(value, { immediate: true })
-        },
-        getBoundingClientRect() {
-          return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight }
-        },
-      })
-
       lenis.on('scroll', ScrollTrigger.update)
 
+      gsap.ticker.lagSmoothing(0)
+
       const raf = (time) => {
-        lenis.raf(time)
+        lenis.raf(time * 1000)
       }
       rafRef.current = raf
       gsap.ticker.add(raf)
@@ -79,7 +71,6 @@ export default function ScrollProvider({ children }) {
         lenisRef.current = null
         rafRef.current = null
       }
-      ScrollTrigger.scrollerProxy(window, null)
     }
   }, [gpuTier])
 
