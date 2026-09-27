@@ -1,3 +1,8 @@
+# Deny public access to the deploy state file
+<Files ".ftp-deploy-sync-state.json">
+  Require all denied
+</Files>
+
 # Hostinger SPA fallback: route all non-asset requests to index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
