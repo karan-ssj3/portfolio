@@ -1,7 +1,9 @@
 // Floating cream pill nav: k·b monogram (pulsing amber "neuron" dot),
 // route links, lilac Contact pill. Hides on scroll-down, reveals on scroll-up.
+// Portalled into document.body so transformed/overflow ancestors cannot break fixed.
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useScrollContext } from '../providers/ScrollProvider'
 import PillButton from './PillButton'
 
@@ -14,12 +16,12 @@ const LINKS = [
 
 const CONTACT_ROUTE = '/contact'
 const TOP_ZONE = 80
-const DELTA = 4
+const DELTA = 8
 
 const STYLE_ID = 'pill-nav-styles'
 
 const CSS = `
-.pill-nav{position:fixed;top:16px;left:50%;transform:translate(-50%,0);width:calc(100% - 24px);max-width:960px;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 20px;background:#FFFFEB;border:1px solid rgba(26,26,26,.1);border-radius:999px;z-index:50;font-family:'Figtree',system-ui,sans-serif;color:#1A1A1A;transition:transform 200ms var(--ease-out)}
+.pill-nav{position:fixed;top:16px;left:50%;transform:translate(-50%,0);width:calc(100% - 24px);max-width:960px;box-sizing:border-box;display:flex;align-items:center;gap:12px;padding:8px 8px 8px 20px;background:#FFFFEB;border:1px solid rgba(26,26,26,.1);border-radius:999px;z-index:1000;font-family:'Figtree',system-ui,sans-serif;color:#1A1A1A;transition:transform 200ms var(--ease-out);visibility:visible;opacity:1}
 .pill-nav.is-hidden{transform:translate(-50%,-120%)}
 .pill-nav__mono{display:inline-flex;align-items:center;font-weight:600;font-size:18px;letter-spacing:.18em;color:#1A1A1A;text-decoration:none;line-height:1;padding:6px 0;flex:none}
 .pill-nav__dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#FFA946;margin:0 .18em 0 0;animation:pill-nav-pulse 2.4s ease-in-out infinite}
@@ -68,15 +70,35 @@ export default function Navbar() {
   const [hidden, setHidden] = useState(false)
   const [focusWithin, setFocusWithin] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [host, setHost] = useState(null)
   const menuBtnRef = useRef(null)
   const lastYRef = useRef(0)
 
+  // Own host node in body, placed right after the skip link host if present.
+  useLayoutEffect(() => {
+    const el = document.createElement('div')
+    el.setAttribute('data-nav-host', '')
+    const skip = document.querySelector('[data-skip-host]')
+    if (skip) skip.after(el)
+    else document.body.insertBefore(el, document.body.firstChild)
+    setHost(el)
+    return () => el.remove()
+  }, [])
+
   const update = useCallback((y) => {
     const last = lastYRef.current
-    if (y < TOP_ZONE) setHidden(false)
-    else if (y > last + DELTA) setHidden(true)
-    else if (y < last - DELTA) setHidden(false)
-    if (Math.abs(y - last) > DELTA || y < TOP_ZONE) lastYRef.current = y
+    if (y < TOP_ZONE) {
+      setHidden(false)
+      lastYRef.current = y
+      return
+    }
+    if (y < last) {
+      setHidden(false)
+      lastYRef.current = y
+    } else if (y - last > DELTA) {
+      setHidden(true)
+      lastYRef.current = y
+    }
   }, [])
 
   // Prefer the Lenis instance when exposed; otherwise rAF-throttled window scroll.
@@ -111,6 +133,7 @@ export default function Navbar() {
   // Close the mobile panel on route change.
   useEffect(() => {
     setMenuOpen(false)
+    setHidden(false)
   }, [pathname])
 
   useEffect(() => {
@@ -153,7 +176,7 @@ export default function Navbar() {
       </li>
     ))
 
-  return (
+  const nav = (
     <nav
       className={`pill-nav${isHidden ? ' is-hidden' : ''}`}
       aria-label="Primary"
@@ -196,4 +219,7 @@ export default function Navbar() {
       )}
     </nav>
   )
+
+  if (!host) return null
+  return createPortal(nav, host)
 }
