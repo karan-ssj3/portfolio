@@ -1,9 +1,30 @@
 # Work Experience
 
-## Data and AI Consultant — Deloitte (Australia)
-**July 2025 – Present**
+## AI Engineer, Neilson Financial Services (Australia)
+**June 2026 – Present**
 
-Leading strategic AI and data initiatives for enterprise clients across financial services and technology sectors. Translating complex technical solutions into actionable business value through client-facing consulting and project management.
+Current role, based in Sydney, Australia. Builds Databricks apps and compliance agents, and drives business insights through LLM-based extraction.
+
+### Key Projects
+
+**LLM Extraction Pipeline**
+Built an LLM extraction pipeline processing 60,000 calls per day, driving business insights through LLM-based extraction.
+
+**Compliance Agents**
+Builds compliance agents for Neilson Financial Services.
+
+**Databricks Apps**
+Builds Databricks apps.
+
+**Stack**
+Python, Databricks, LLMs, RAG, embeddings, pgvector/Postgres.
+
+---
+
+## Data and AI Consultant, Deloitte (Australia)
+**July 2025 – June 2026**
+
+Led strategic AI and data initiatives for enterprise clients across financial services and technology sectors. Translated complex technical solutions into actionable business value through client-facing consulting and project management.
 
 ### Key Projects
 
@@ -20,14 +41,14 @@ Architected a production-scale recommendation engine for 3.2M+ profiles using Al
 
 ---
 
-## Casual Academic — Statistical Thinking for Data Science, UTS
+## Casual Academic: Statistical Thinking for Data Science, UTS
 **August 2025 – December 2025**
 
 Led the "Statistical Thinking for Data Science" curriculum for 200+ students, facilitating workshops and technical consultations to translate complex concepts like probability and regression into practical, code-based applications. Mentored students through real-world project interpretation.
 
 ---
 
-## Data Scientist and AI Engineer — Synogize (Data and AI Consulting Services)
+## Data Scientist and AI Engineer, Synogize (Data and AI Consulting Services)
 **January 2025 – July 2025**
 
 ### Key Projects

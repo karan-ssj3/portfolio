@@ -10,7 +10,7 @@ const FAQS = [
   },
   {
     q: 'Where does he work right now?',
-    a: 'He is a Data and AI Consultant at Deloitte in Sydney (July 2025 – present), leading strategic AI and data initiatives for enterprise clients across financial services and technology. He also led the Statistical Thinking for Data Science curriculum at UTS for 200+ students.',
+    a: 'He is an AI Engineer at Neilson Financial Services in Sydney (since June 2026), building Databricks apps, compliance agents, and an LLM extraction pipeline that processes 60,000 calls per day. Previously he was a Data and AI Consultant at Deloitte (July 2025 – June 2026), leading strategic AI and data initiatives for enterprise clients across financial services and technology. He also led the Statistical Thinking for Data Science curriculum at UTS for 200+ students.',
   },
   {
     q: 'What has he shipped at scale?',

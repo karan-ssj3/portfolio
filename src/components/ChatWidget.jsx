@@ -7,7 +7,7 @@ const WELCOME = {
 }
 
 const SUGGESTED = [
-  "What does Karan do at Deloitte?",
+  "What does Karan do at Neilson?",
   "Tell me about his RAG projects",
   "What are his strongest skills?",
 ]

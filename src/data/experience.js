@@ -1,12 +1,29 @@
 export const EXPERIENCE = [
   {
+    id: 4,
+    title: 'AI Engineer',
+    company: 'Neilson Financial Services',
+    location: 'Sydney, Australia',
+    startDate: 'Jun 2026',
+    endDate: 'Present',
+    current: true,
+    accent: 'accent',
+    description: [
+      'Built an LLM extraction pipeline processing 60,000 calls per day, turning call data into structured information the business can act on',
+      'Drive business insights through LLM-based extraction, surfacing signals from high-volume call data',
+      'Build compliance agents that bring LLM and RAG capabilities to compliance workflows',
+      'Build Databricks apps that deliver AI and data tooling directly on the Databricks platform',
+    ],
+    techStack: ['Python', 'Databricks', 'LLMs', 'RAG', 'Embeddings', 'pgvector/Postgres'],
+  },
+  {
     id: 1,
     title: 'Data and AI Consultant',
     company: 'Deloitte',
     location: 'Sydney, Australia',
     startDate: 'Jul 2025',
-    endDate: 'Present',
-    current: true,
+    endDate: 'Jun 2026',
+    current: false,
     accent: 'accent',
     description: [
       'Lead strategic AI and data initiatives for enterprise clients across financial services, manufacturing, and technology sectors',
@@ -36,7 +53,7 @@ export const EXPERIENCE = [
   },
   {
     id: 3,
-    title: 'Casual Academic — Statistical Thinking',
+    title: 'Casual Academic: Statistical Thinking',
     company: 'UTS',
     location: 'Sydney, Australia',
     startDate: 'Aug 2025',
