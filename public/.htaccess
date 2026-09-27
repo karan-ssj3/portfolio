@@ -11,3 +11,24 @@
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^ index.html [L]
 </IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  # HTML must always be revalidated so visitors get the latest build
+  ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Hashed build assets never change, cache them for a year
+  Header set Cache-Control "public, max-age=31536000, immutable" "expr=%{REQUEST_URI} =~ m#^/assets/#"
+
+  # Match on content type, not URL: LiteSpeed does not apply the FilesMatch
+  # rule below for '/' or SPA routes rewritten to index.html, so without this
+  # the homepage is served with no Cache-Control and browsers keep stale HTML.
+  Header always set Cache-Control "no-cache, must-revalidate" "expr=%{CONTENT_TYPE} =~ m#^text/html#"
+
+  # Kept as a fallback for direct /index.html requests (harmless duplicate)
+  <FilesMatch "^index\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
