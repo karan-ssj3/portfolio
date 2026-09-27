@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import '../styles/chatwidget.css'
 
 const WELCOME = {
   role: 'assistant',
