@@ -8,7 +8,7 @@ import { lazy, useCallback, useEffect, useRef, useState } from 'react'
  * rendered, while the cleanup flag prevents state updates after unmount.
  *
  * The lazy component is created exactly once per hook instance (stored in a
- * ref) so its internal hook state stays stable across renders — recreating
+ * ref) so its internal hook state stays stable across renders: recreating
  * it per render causes React to throw "Invalid hook call" when the chunk
  * resolves.
  */

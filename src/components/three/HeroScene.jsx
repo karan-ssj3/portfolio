@@ -17,7 +17,7 @@ const FIELD_RADIUS = 6
  *
  * A 3D particle / neural-net field rendered with dark ink points and
  * connecting lines on a warm light background, with a single subtle
- * accent node. Designed for the light palette — no neon, no black.
+ * accent node. Designed for the light palette, no neon, no black.
  *
  * Scroll-driven camera drift is applied only when the GPU tier is high
  * AND reduced motion is false (gated by the parent Hero component). When
@@ -147,7 +147,7 @@ export default function HeroScene() {
 
   return (
     <group ref={groupRef}>
-      {/* Connection lines — dark ink, low opacity */}
+      {/* Connection lines - dark ink, low opacity */}
       <lineSegments ref={linesRef} geometry={lineGeometry}>
         <lineBasicMaterial
           color={INK}
@@ -157,7 +157,7 @@ export default function HeroScene() {
         />
       </lineSegments>
 
-      {/* Particles — dark ink points */}
+      {/* Particles - dark ink points */}
       <points>
         <bufferGeometry>
           <bufferAttribute
@@ -176,7 +176,7 @@ export default function HeroScene() {
         />
       </points>
 
-      {/* Single accent node — the focal point of the field */}
+      {/* Single accent node - the focal point of the field */}
       <mesh position={[0, 0, 0]}>
         <sphereGeometry args={[0.09, 24, 24]} />
         <meshBasicMaterial color={ACCENT} transparent opacity={0.9} />

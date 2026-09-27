@@ -3,7 +3,7 @@ let cachedTier = null
 /**
  * Resolve the device GPU tier as 'high', 'mid', or 'low'.
  *
- * Purely local heuristic — no network requests. Combines the WebGL renderer
+ * Purely local heuristic: no network requests. Combines the WebGL renderer
  * string with navigator.hardwareConcurrency and navigator.deviceMemory to
  * bucket devices, and caches the result for the session.
  */

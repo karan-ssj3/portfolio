@@ -178,7 +178,7 @@ export default function ProjectNodes({ projects = [], progressRef }) {
           onHover={setHovered}
         />
       ))}
-      {/* Faint ink lines connecting consecutive nodes — a constellation feel. */}
+      {/* Faint ink lines connecting consecutive nodes: a constellation feel. */}
       {nodes.length > 1 &&
         nodes.slice(0, -1).map(({ project, position }, index) => {
           const next = nodes[index + 1].position

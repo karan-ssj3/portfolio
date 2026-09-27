@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber'
 const INK = '#1C1B18'
 const ACCENT = '#9C5636'
 
-// Parse hex into linear RGB floats once, up front — never index the hex string.
+// Parse hex into linear RGB floats once, up front: never index the hex string.
 const INK_RGB = [0x1c / 255, 0x1b / 255, 0x18 / 255]
 const ACCENT_RGB = [0x9c / 255, 0x56 / 255, 0x36 / 255]
 
@@ -186,7 +186,7 @@ function FloatingParticles({ count = 120 }) {
  *
  * Per-step 3D scene: a dot-matrix step number with an accent period and a
  * sparse particle field. Uses R3F hooks, so it must be rendered inside a
- * <Canvas> — mount it through CanvasWrapper, passing `index` via sceneProps.
+ * <Canvas>: mount it through CanvasWrapper, passing `index` via sceneProps.
  */
 export default function ProcessScene({ index = 0 }) {
   const groupRef = useRef()
