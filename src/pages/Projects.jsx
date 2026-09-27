@@ -1,15 +1,19 @@
 import { PROJECTS } from '../data/projects'
 import Section from '../components/Section'
+import PillButton from '../components/PillButton'
 
 // Page-scoped styles, injected once alongside the page (tokens from index.css).
 const PROJECTS_CSS = `
 .projects-hero {
   padding-top: 160px;
   padding-bottom: 96px;
+  overflow: visible;
 }
 .projects-hero__title {
   margin: 0;
   color: #FFFFEB;
+  line-height: 1.05;
+  padding-bottom: 0.08em;
 }
 .projects-list {
   padding: 96px 0 120px;
@@ -22,12 +26,17 @@ const PROJECTS_CSS = `
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 24px;
 }
+.proj-grid > li {
+  margin: 0;
+  min-width: 0;
+}
 .proj-card {
   display: flex;
   flex-direction: column;
   gap: 16px;
   height: 100%;
   min-width: 0;
+  margin: 0;
   box-sizing: border-box;
   background-color: #FFFFEB;
   color: #1A1A1A;
@@ -56,9 +65,10 @@ const PROJECTS_CSS = `
 }
 .proj-card__subtitle {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
-  color: rgba(26, 26, 26, 0.6);
+  min-height: 2.8em;
+  color: rgba(26, 26, 26, 0.78);
 }
 .proj-card__title {
   margin: 0;
@@ -83,7 +93,9 @@ const PROJECTS_CSS = `
   line-height: 1.3;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(26, 26, 26, 0.1);
+  color: #1A1A1A;
+  background: transparent;
+  border: 1px solid rgba(26, 26, 26, 0.15);
 }
 .proj-card__links {
   margin-top: auto;
@@ -102,13 +114,40 @@ const PROJECTS_CSS = `
 .proj-card__link:hover {
   border-bottom-color: #1A1A1A;
 }
+.proj-cta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  height: 100%;
+  box-sizing: border-box;
+  background-color: #F0D7FF;
+  color: #1A1A1A;
+  border: 1px solid #1A1A1A;
+  border-radius: var(--radius-card, 24px);
+  padding: 28px;
+}
+.proj-cta__title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+.proj-cta__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+@media (min-width: 1025px) {
+  .proj-grid__cta--hidden { display: none; }
+}
 @media (max-width: 1024px) {
   .proj-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .proj-grid > li.proj-grid__cta { grid-column: 1 / -1 !important; }
 }
 @media (max-width: 640px) {
   .projects-hero { padding-bottom: 64px; }
   .projects-list { padding: 64px 0 96px; }
-  .proj-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .proj-grid { grid-template-columns: minmax(0, 1fr); }
 }
 `
 
@@ -126,7 +165,7 @@ function ProjectCard({ project }) {
         </p>
       )}
 
-      {project.subtitle && <p className="proj-card__subtitle">{project.subtitle}</p>}
+      <p className="proj-card__subtitle">{project.subtitle || ''}</p>
       <h2 className="proj-card__title display">{project.title}</h2>
       {project.description && <p className="proj-card__desc">{project.description}</p>}
 
@@ -142,12 +181,12 @@ function ProjectCard({ project }) {
         <div className="proj-card__links">
           {project.github && (
             <a href={project.github} target="_blank" rel="noopener noreferrer" className="proj-card__link">
-              View on GitHub <span aria-hidden="true">→</span>
+              View on GitHub
             </a>
           )}
           {project.demo && (
             <a href={project.demo} target="_blank" rel="noopener noreferrer" className="proj-card__link">
-              Live demo <span aria-hidden="true">→</span>
+              Live demo
             </a>
           )}
         </div>
@@ -156,7 +195,24 @@ function ProjectCard({ project }) {
   )
 }
 
+function CtaCard() {
+  return (
+    <div className="proj-cta">
+      <p className="proj-cta__title display">More on GitHub</p>
+      <div className="proj-cta__actions">
+        <PillButton variant="outline" href="https://github.com/karan-ssj3">GitHub</PillButton>
+        <PillButton variant="primary" href="/contact">Contact</PillButton>
+      </div>
+    </div>
+  )
+}
+
 export default function Projects() {
+  const rem = PROJECTS.length % 3
+  const ctaStyle = rem === 0 ? undefined : { gridColumn: `span ${3 - rem}` }
+  // At 3 columns a full last row needs no CTA; it stays full-width at 2 and 1 columns.
+  const ctaClass = rem === 0 ? 'proj-grid__cta proj-grid__cta--hidden' : 'proj-grid__cta'
+
   return (
     <div className="page page--projects">
       <style>{PROJECTS_CSS}</style>
@@ -177,6 +233,9 @@ export default function Projects() {
                 <ProjectCard project={p} />
               </li>
             ))}
+            <li className={ctaClass} style={ctaStyle}>
+              <CtaCard />
+            </li>
           </ul>
         </div>
       </Section>
