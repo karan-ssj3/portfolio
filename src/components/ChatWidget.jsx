@@ -202,56 +202,59 @@ export default function ChatWidget() {
       >
         <div className="cw-header">
           <div className="cw-header-dot" aria-hidden="true" />
-          <div className="cw-header-title" id="cw-title">Ask Karan's AI</div>
+          <div className="cw-header-title" id="cw-title">Ask Karan’s AI</div>
           <div className="cw-header-badge">RAG-powered</div>
           <button
+            type="button"
             className="cw-close"
             onClick={closePanel}
             aria-label="Close chat"
           >
-            <span aria-hidden="true">+</span>
+            <span aria-hidden="true">×</span>
           </button>
         </div>
 
-        <div
-          ref={messagesRef}
-          className="cw-messages"
-          aria-live="polite"
-          aria-label="Chat messages"
-          data-lenis-prevent
-        >
-          {messages.map((msg, i) => (
-            <div key={i} className={`cw-msg cw-msg-${msg.role}${msg.isSystem ? ' cw-msg-system' : ''}`}>
-              <div className={`cw-avatar cw-avatar-${msg.role}`} aria-hidden="true">
-                {msg.role === 'assistant' ? 'K' : '↑'}
+        <div className="cw-body" data-lenis-prevent>
+          <div
+            ref={messagesRef}
+            className="cw-messages"
+            aria-live="polite"
+            aria-label="Chat messages"
+            data-lenis-prevent
+          >
+            {messages.map((msg, i) => (
+              <div key={i} className={`cw-msg cw-msg-${msg.role}${msg.isSystem ? ' cw-msg-system' : ''}`}>
+                <div className={`cw-avatar cw-avatar-${msg.role}`} aria-hidden="true">
+                  {msg.role === 'assistant' ? 'K' : '↑'}
+                </div>
+                <div className={`cw-bubble cw-bubble-${msg.role}`}>
+                  {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
+                </div>
               </div>
-              <div className={`cw-bubble cw-bubble-${msg.role}`}>
-                {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
-              </div>
-            </div>
-          ))}
+            ))}
 
-          {loading && (
-            <div className="cw-msg cw-msg-assistant">
-              <div className="cw-avatar cw-avatar-assistant" aria-hidden="true">K</div>
-              <div className="cw-typing" aria-hidden="true">
-                {[0, 150, 300].map(d => (
-                  <span key={d} className="cw-typing-dot" style={{ animationDelay: `${d}ms` }} />
-                ))}
+            {loading && (
+              <div className="cw-msg cw-msg-assistant">
+                <div className="cw-avatar cw-avatar-assistant" aria-hidden="true">K</div>
+                <div className="cw-typing" aria-hidden="true">
+                  {[0, 150, 300].map(d => (
+                    <span key={d} className="cw-typing-dot" style={{ animationDelay: `${d}ms` }} />
+                  ))}
+                </div>
               </div>
+            )}
+          </div>
+
+          {showSuggested && messages.length === 1 && (
+            <div className="cw-suggestions">
+              {SUGGESTED.map(q => (
+                <button key={q} type="button" className="cw-suggestion" onClick={() => send(q)}>{q}</button>
+              ))}
             </div>
           )}
+
+          {error && <div className="cw-error" role="alert">{error}</div>}
         </div>
-
-        {showSuggested && messages.length === 1 && (
-          <div className="cw-suggestions">
-            {SUGGESTED.map(q => (
-              <button key={q} className="cw-suggestion" onClick={() => send(q)}>{q}</button>
-            ))}
-          </div>
-        )}
-
-        {error && <div className="cw-error" role="alert">{error}</div>}
 
         <div className="cw-input-bar">
           <input
@@ -265,6 +268,7 @@ export default function ChatWidget() {
             disabled={loading}
           />
           <button
+            type="button"
             className="cw-send"
             onClick={() => send()}
             disabled={loading || !input.trim()}
