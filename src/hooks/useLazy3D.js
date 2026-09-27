@@ -1,4 +1,4 @@
-import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, useCallback, useEffect, useRef, useState } from 'react'
 
 /**
  * Hook for coordinating a React.lazy-loaded 3D scene chunk.
@@ -6,9 +6,18 @@ import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
  * Returns the lazy component plus an explicit `load` trigger and mount-safe
  * state. Calling `load()` starts fetching the chunk before the component is
  * rendered, while the cleanup flag prevents state updates after unmount.
+ *
+ * The lazy component is created exactly once per hook instance (stored in a
+ * ref) so its internal hook state stays stable across renders — recreating
+ * it per render causes React to throw "Invalid hook call" when the chunk
+ * resolves.
  */
 export default function useLazy3D(importFactory) {
-  const LazyComponent = useMemo(() => lazy(importFactory), [importFactory])
+  const lazyRef = useRef(null)
+  if (lazyRef.current === null) {
+    lazyRef.current = lazy(importFactory)
+  }
+  const LazyComponent = lazyRef.current
 
   const mountedRef = useRef(true)
   const loadedRef = useRef(false)
