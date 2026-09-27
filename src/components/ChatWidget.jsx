@@ -63,7 +63,7 @@ export default function ChatWidget() {
   const panelRef  = useRef(null)
   const triggerRef = useRef(null)
 
-  // Scroll only the messages panel itself — scrollIntoView would also
+  // Scroll only the messages panel itself. scrollIntoView would also
   // scroll the page (and fight the page's smooth scroller).
   useEffect(() => {
     const el = messagesRef.current
@@ -140,7 +140,7 @@ export default function ChatWidget() {
     const wakeTimer  = setTimeout(() => {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: '// Waking up the server — this takes ~30s on first load. Hang tight...',
+        content: '// Waking up the server, this takes ~30s on first load. Hang tight...',
         isSystem: true,
       }])
     }, 6000)
@@ -163,7 +163,7 @@ export default function ChatWidget() {
     } catch {
       setMessages([...next, {
         role: 'assistant',
-        content: "The server didn't respond in time. Please try again — it may have been sleeping.",
+        content: "The server didn't respond in time. Please try again. It may have been sleeping.",
       }])
     } finally {
       clearTimeout(wakeTimer)
@@ -267,7 +267,17 @@ export default function ChatWidget() {
         aria-expanded={open}
         aria-controls="chat-panel"
       >
-        <span className="cw-trigger-icon" aria-hidden="true">{open ? '+' : '◈'}</span>
+        <span className="cw-trigger-icon" aria-hidden="true">
+          {open ? (
+            <span className="cw-trigger-close">+</span>
+          ) : (
+            <span className="cw-bars">
+              <span className="cw-bar" />
+              <span className="cw-bar" />
+              <span className="cw-bar" />
+            </span>
+          )}
+        </span>
       </button>
     </>
   )
