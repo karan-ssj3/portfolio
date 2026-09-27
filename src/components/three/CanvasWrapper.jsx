@@ -8,13 +8,38 @@ import SceneErrorBoundary from './SceneErrorBoundary'
 // Loaded on demand so three.js never lands in the main chunk.
 const Canvas = lazy(() => import('./R3FCanvas'))
 
+const INTERACTION_EVENTS = ['scroll', 'wheel', 'touchstart', 'pointerdown', 'keydown']
+
+// True on devices where a full-resolution canvas costs too much main-thread time.
+function isConstrainedDevice() {
+  if (typeof navigator === 'undefined') return true
+  const cores = navigator.hardwareConcurrency
+  const memory = navigator.deviceMemory
+  const saveData = navigator.connection && navigator.connection.saveData
+  return (
+    (typeof cores === 'number' && cores <= 4) ||
+    (typeof memory === 'number' && memory <= 4) ||
+    Boolean(saveData)
+  )
+}
+
+function scheduleIdle(callback) {
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    const id = window.requestIdleCallback(callback, { timeout: 1500 })
+    return () => window.cancelIdleCallback(id)
+  }
+  const id = setTimeout(callback, 200)
+  return () => clearTimeout(id)
+}
+
 /**
  * CanvasWrapper
  *
- * Lazy-loads a 3D scene chunk and mounts the R3F <Canvas> only when the
- * wrapper is near the viewport. Falls back to a static generative image on
- * low-GPU devices or when the user prefers reduced motion. Any error thrown
- * by the scene is contained by SceneErrorBoundary and shows the fallback.
+ * Lazy-loads a 3D scene chunk and mounts the R3F <Canvas> only on demand:
+ * after the first user interaction, once the wrapper is within one viewport,
+ * and when the browser is idle. Until then (and on low-GPU devices or under
+ * reduced motion) the static fallback renders in the same box, so nothing
+ * shifts. Any error thrown by the scene is contained by SceneErrorBoundary.
  *
  * `sceneProps` are forwarded to the scene component rendered inside the
  * Canvas, merged with `inView` so scenes may early-return while off-screen.
@@ -34,12 +59,16 @@ export default function CanvasWrapper({
   const wrapperRef = useRef(null)
 
   const [inView, setInView] = useState(false)
+  const [near, setNear] = useState(false)
+  const [interacted, setInteracted] = useState(false)
   const [shouldMount, setShouldMount] = useState(false)
 
   const isLowGPU = gpuTier === 'low'
   const canRender3D = !reducedMotion && !isLowGPU
 
   const { Component: LazyScene, load, error: loadError } = useLazy3D(scene)
+  const loadRef = useRef(load)
+  loadRef.current = load
 
   useEffect(() => {
     if (loadError) {
@@ -48,31 +77,58 @@ export default function CanvasWrapper({
     }
   }, [loadError])
 
+  // (a) First user interaction.
+  useEffect(() => {
+    if (!canRender3D || interacted) return
+    const onInteract = () => {
+      setInteracted(true)
+      INTERACTION_EVENTS.forEach((type) => window.removeEventListener(type, onInteract))
+    }
+    INTERACTION_EVENTS.forEach((type) =>
+      window.addEventListener(type, onInteract, { passive: true, once: true }),
+    )
+    return () => {
+      INTERACTION_EVENTS.forEach((type) => window.removeEventListener(type, onInteract))
+    }
+  }, [canRender3D, interacted])
+
+  // (b) Within one viewport of the section.
   useEffect(() => {
     if (!canRender3D) return
-
     const element = wrapperRef.current
     if (!element) return
-
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true)
-          setShouldMount(true)
-          load()
-        } else {
-          setInView(false)
-        }
-      },
-      { rootMargin: '200px', threshold: 0 },
+      ([entry]) => setNear(entry.isIntersecting),
+      { rootMargin: '100% 0px', threshold: 0 },
     )
-
     observer.observe(element)
     return () => observer.disconnect()
-  }, [canRender3D, load])
+  }, [canRender3D])
 
-  // Cap pixel ratio by GPU tier to keep the scene lightweight on mid devices.
-  const dpr = gpuTier === 'high' ? [1, 2] : gpuTier === 'mid' ? [1, 1.5] : [1, 1]
+  // Visibility for opacity and scene early-returns.
+  useEffect(() => {
+    if (!canRender3D) return
+    const element = wrapperRef.current
+    if (!element) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { rootMargin: '200px', threshold: 0 },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [canRender3D])
+
+  // (c) Idle: only then request the chunks.
+  useEffect(() => {
+    if (!canRender3D || shouldMount || !interacted || !near) return
+    return scheduleIdle(() => {
+      setShouldMount(true)
+      loadRef.current()
+    })
+  }, [canRender3D, shouldMount, interacted, near])
+
+  // Cap pixel ratio by device capability to keep scripting and fill cost low.
+  const [dpr] = useState(() => (isConstrainedDevice() ? [1, 1.25] : [1, 1.75]))
 
   const show3D = canRender3D && shouldMount && !loadError && Boolean(LazyScene)
 
