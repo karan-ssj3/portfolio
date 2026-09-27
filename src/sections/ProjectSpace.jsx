@@ -1,243 +1,371 @@
-import { useEffect, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { Suspense } from 'react'
-import ProjectNodes from '../components/three/ProjectNodes'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import Section from '../components/Section'
+import PillButton from '../components/PillButton'
 import { PROJECTS } from '../data/projects'
-import useGPU from '../hooks/useGPU'
 import useReducedMotion from '../hooks/useReducedMotion'
 
-const BG = '#F5F3EE'
-const INK = '#1C1B18'
-const ACCENT = '#9C5636'
+gsap.registerPlugin(ScrollTrigger)
 
-const DISPLAY_FONT = "'Space Grotesk', 'Space Grotesk Fallback', sans-serif"
-const BODY_FONT = "'Inter', 'Inter Fallback', sans-serif"
+const CREAM = '#FFFFEB'
+const INK = '#1A1A1A'
+const CORAL = '#FF6C4C'
+const EM_DASH = '\u2014'
+
+// Only these figures may appear in the section. Sentences pulled from the
+// data are rejected if they carry any other number.
+const ALLOWED_FIGURES = ['3 days', '30 minutes', '30 min', '40%', '3.2M+']
+
+const BEATS = [
+  {
+    id: 'job-card',
+    keyword: 'maintenance',
+    label: 'GenAI maintenance agent: Job Card planning',
+    manual: '3 days',
+    automated: '30 min',
+    prefer: '3 days',
+  },
+  {
+    id: 'contract-review',
+    keyword: 'contract',
+    label: 'Multimodal contract compliance: review time',
+    manual: '100%',
+    automated: '\u221240%',
+    prefer: '40%',
+  },
+  {
+    id: 'recommendations',
+    keyword: 'recommendation',
+    label: 'Recommendation engine: profiles served weekly on Kubeflow',
+    manual: null,
+    automated: '3.2M+',
+    prefer: '3.2M+',
+  },
+]
+
+function findProject(keyword) {
+  const k = keyword.toLowerCase()
+  return (
+    PROJECTS.find((p) => String(p.title || '').toLowerCase().includes(k)) ||
+    PROJECTS.find((p) => String(p.description || '').toLowerCase().includes(k)) ||
+    null
+  )
+}
+
+function isSafe(text) {
+  if (!text || text.includes(EM_DASH)) return false
+  let stripped = text
+  ALLOWED_FIGURES.forEach((f) => {
+    stripped = stripped.split(f).join('')
+  })
+  return !/\d/.test(stripped)
+}
+
+// Pick one sentence, verbatim, from the project description. Prefer the one
+// carrying the beat's own figure; otherwise the first sentence that passes
+// the text rules.
+function pickSentence(description, prefer) {
+  if (!description) return null
+  const sentences = description
+    .split(/(?<=[.!?])\s+(?=[A-Z])/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const preferred = sentences.find((s) => s.includes(prefer) && isSafe(s))
+  if (preferred) return preferred
+  return sentences.find(isSafe) || null
+}
+
+function resolveBeats() {
+  return BEATS.map((beat) => {
+    const project = findProject(beat.keyword)
+    if (!project) return { ...beat, title: null, sentence: null }
+    const title = isSafe(project.title) ? project.title : null
+    const sentence = pickSentence(project.description, beat.prefer)
+    return { ...beat, title, sentence }
+  })
+}
+
+function useIsNarrow() {
+  const query = '(max-width: 719px)'
+  const [narrow, setNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(query).matches
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(query)
+    const onChange = (e) => setNarrow(e.matches)
+    mq.addEventListener('change', onChange)
+    setNarrow(mq.matches)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return narrow
+}
+
+const cardBase = {
+  boxSizing: 'border-box',
+  height: '100%',
+  borderRadius: 'var(--radius-card)',
+  padding: 'clamp(20px, 3vw, 32px)',
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'space-between',
+  gap: '16px',
+  overflow: 'hidden',
+}
+
+function ManualCard({ value }) {
+  return (
+    <div
+      style={{
+        ...cardBase,
+        background: 'transparent',
+        color: CREAM,
+        border: '1px solid rgba(255,255,235,.3)',
+        borderLeft: `4px solid ${CORAL}`,
+      }}
+    >
+      <span className="eyebrow">MANUAL</span>
+      <span className="display d-75 tnum" style={{ whiteSpace: 'nowrap' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function AutomatedCard({ value }) {
+  return (
+    <div style={{ ...cardBase, background: CREAM, color: INK }}>
+      <span className="eyebrow">AUTOMATED</span>
+      <span className="display d-75 tnum" style={{ whiteSpace: 'nowrap' }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function BeatCaption({ beat }) {
+  return (
+    <div style={{ maxWidth: '60rem' }}>
+      {beat.title ? (
+        <h3 className="display d-32" style={{ margin: '0 0 8px' }}>
+          {beat.title}
+        </h3>
+      ) : null}
+      {beat.sentence ? (
+        <p style={{ margin: 0, fontSize: '16px', lineHeight: 1.5, opacity: 0.8 }}>
+          {beat.sentence}
+        </p>
+      ) : null}
+    </div>
+  )
+}
 
 /**
  * ProjectSpace
  *
- * Scroll-driven 3D scatter of project nodes. The section is tall (one
- * viewport per project, roughly) with a sticky canvas; scroll progress flies
- * the camera along a path through the constellation. On low-GPU devices or
- * when the user prefers reduced motion, a static grid list of the same
- * PROJECTS data is rendered instead.
+ * Teal pinned proof slab. A sticky stage inside a 300vh wrapper; one scrubbed
+ * ScrollTrigger timeline morphs the Manual card into the Automated card for
+ * each of three real results, then crossfades to the next. Reduced motion and
+ * narrow screens get the same beats as stacked card pairs with no pin.
  */
 export default function ProjectSpace() {
-  const gpuTier = useGPU()
   const reducedMotion = useReducedMotion()
+  const narrow = useIsNarrow()
+  const pinned = !reducedMotion && !narrow
 
-  const sectionRef = useRef(null)
-  const progressRef = useRef(0)
-  const [ready, setReady] = useState(false)
+  const beats = useMemo(resolveBeats, [])
 
-  const isLowGPU = gpuTier === 'low'
-  const use3D = !reducedMotion && !isLowGPU
+  const wrapperRef = useRef(null)
+  const beatRefs = useRef([])
+  const manualRefs = useRef([])
+  const autoRefs = useRef([])
 
   useEffect(() => {
-    if (!use3D) return undefined
+    if (!pinned || !wrapperRef.current) return undefined
 
-    const update = () => {
-      const el = sectionRef.current
-      if (!el) return
-      const rect = el.getBoundingClientRect()
-      const scrollable = rect.height - window.innerHeight
-      if (scrollable <= 0) return
-      const p = -rect.top / scrollable
-      progressRef.current = Math.min(1, Math.max(0, p))
-    }
+    const ctx = gsap.context(() => {
+      beatRefs.current.forEach((el, i) => {
+        if (el) gsap.set(el, { autoAlpha: i === 0 ? 1 : 0 })
+      })
 
-    update()
-    setReady(true)
-    window.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
-    return () => {
-      window.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [use3D])
+      const tl = gsap.timeline({
+        defaults: { ease: 'none' },
+        scrollTrigger: {
+          trigger: wrapperRef.current,
+          start: 'top top',
+          end: 'bottom bottom',
+          scrub: true,
+        },
+      })
 
-  if (!use3D) {
+      beats.forEach((beat, i) => {
+        const manual = manualRefs.current[i]
+        const auto = autoRefs.current[i]
+        if (manual) {
+          tl.to(manual, { width: '0%', paddingRight: 0, opacity: 0, duration: 0.7 }, i)
+        }
+        if (auto) tl.to(auto, { width: '100%', duration: 0.7 }, i)
+
+        const current = beatRefs.current[i]
+        const next = beatRefs.current[i + 1]
+        if (next && current) {
+          tl.to(current, { autoAlpha: 0, duration: 0.3 }, i + 0.7)
+          tl.to(next, { autoAlpha: 1, duration: 0.3 }, i + 0.7)
+        } else {
+          // Hold the final state so each beat owns an equal third.
+          tl.to({}, { duration: 0.3 }, i + 0.7)
+        }
+      })
+    }, wrapperRef)
+
+    return () => ctx.revert()
+  }, [pinned, beats])
+
+  const headline = (
+    <h2 className="display d-96" style={{ margin: 0, color: CREAM }}>
+      Manual process, <em>automated.</em>
+    </h2>
+  )
+
+  const cta = (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        padding: '48px 0 clamp(72px, 10vw, 120px)',
+      }}
+    >
+      <PillButton variant="primary" href="/projects">
+        All projects
+      </PillButton>
+    </div>
+  )
+
+  if (!pinned) {
     return (
-      <section
-        id="projects"
-        aria-label="Projects"
-        style={{
-          backgroundColor: BG,
-          color: INK,
-          fontFamily: BODY_FONT,
-          padding: 'clamp(3rem, 8vw, 6rem) clamp(1.25rem, 5vw, 4rem)',
-        }}
-      >
-        <h2
-          style={{
-            fontFamily: DISPLAY_FONT,
-            fontSize: 'clamp(2rem, 5vw, 3.25rem)',
-            margin: '0 0 0.5rem',
-            letterSpacing: '-0.02em',
-          }}
+      <Section tone="teal" overlapTop roundedBottom id="projects" aria-label="Projects">
+        <div
+          className="wrap"
+          style={{ paddingTop: 'clamp(96px, 12vw, 140px)', overflowX: 'hidden' }}
         >
-          Project Space
-        </h2>
-        <p
-          style={{
-            margin: '0 0 2.5rem',
-            maxWidth: '38rem',
-            color: INK,
-            opacity: 0.75,
-            fontSize: '1rem',
-            lineHeight: 1.6,
-          }}
-        >
-          A constellation of selected work — engineering, data science, and
-          applied AI systems.
-        </p>
-        <ul
-          style={{
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(20rem, 100%), 1fr))',
-            gap: '1.25rem',
-          }}
-        >
-          {PROJECTS.map((project) => (
-            <li key={project.id}>
-              <article
-                style={{
-                  border: `1px solid ${INK}22`,
-                  padding: '1.25rem 1.25rem 1.5rem',
-                  backgroundColor: BG,
-                  height: '100%',
-                  boxSizing: 'border-box',
-                }}
-              >
-                <p
-                  style={{
-                    margin: '0 0 0.5rem',
-                    fontFamily: DISPLAY_FONT,
-                    fontSize: '0.75rem',
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                    color: ACCENT,
-                  }}
-                >
-                  {String(project.id).padStart(2, '0')}
+          {headline}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '56px', marginTop: '48px' }}>
+            {beats.map((beat) => (
+              <article key={beat.id}>
+                <p className="eyebrow" style={{ margin: '0 0 16px' }}>
+                  {beat.label}
                 </p>
-                <h3
+                <div
                   style={{
-                    fontFamily: DISPLAY_FONT,
-                    fontSize: '1.15rem',
-                    margin: '0 0 0.35rem',
-                    lineHeight: 1.3,
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(260px, 100%), 1fr))',
+                    gap: '12px',
+                    marginBottom: '20px',
                   }}
                 >
-                  {project.title}
-                </h3>
-                <p style={{ margin: '0 0 1rem', fontSize: '0.85rem', opacity: 0.75 }}>
-                  {project.subtitle}
-                </p>
-                <ul
-                  aria-label="Tech stack"
-                  style={{
-                    listStyle: 'none',
-                    margin: 0,
-                    padding: 0,
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '0.4rem',
-                  }}
-                >
-                  {project.techStack.map((tech) => (
-                    <li
-                      key={tech}
-                      style={{
-                        fontSize: '0.7rem',
-                        border: `1px solid ${INK}22`,
-                        padding: '0.2rem 0.5rem',
-                        borderRadius: '999px',
-                      }}
-                    >
-                      {tech}
-                    </li>
-                  ))}
-                </ul>
+                  {beat.manual ? <ManualCard value={beat.manual} /> : null}
+                  <AutomatedCard value={beat.automated} />
+                </div>
+                <BeatCaption beat={beat} />
               </article>
-            </li>
-          ))}
-        </ul>
-      </section>
+            ))}
+          </div>
+          {cta}
+        </div>
+      </Section>
     )
   }
 
-  const dpr = gpuTier === 'high' ? [1, 2] : [1, 1.5]
-
   return (
-    <section
-      id="projects"
-      ref={sectionRef}
-      aria-label="Projects"
-      style={{
-        backgroundColor: BG,
-        position: 'relative',
-        height: `${Math.max(PROJECTS.length, 4) * 60}vh`,
-      }}
-    >
-      <div
-        style={{
-          position: 'sticky',
-          top: 0,
-          height: '100vh',
-          overflow: 'hidden',
-        }}
-      >
-        {ready && (
-          <Canvas
-            dpr={dpr}
-            style={{ width: '100%', height: '100%' }}
-            camera={{ position: [0, 0, 14], fov: 50 }}
-            gl={{ antialias: true, alpha: false }}
-            onCreated={({ gl }) => {
-              gl.setClearColor(BG)
-            }}
-          >
-            <Suspense fallback={null}>
-              <ProjectNodes projects={PROJECTS} progressRef={progressRef} />
-            </Suspense>
-          </Canvas>
-        )}
-        <header
+    <Section tone="teal" overlapTop roundedBottom id="projects" aria-label="Projects">
+      <div ref={wrapperRef} style={{ position: 'relative', height: '300vh' }}>
+        <div
           style={{
-            position: 'absolute',
-            top: 'clamp(1.5rem, 5vh, 3rem)',
-            left: 'clamp(1.25rem, 5vw, 4rem)',
-            pointerEvents: 'none',
-            color: INK,
+            position: 'sticky',
+            top: 0,
+            height: '100svh',
+            overflow: 'hidden',
           }}
         >
-          <h2
+          <div
+            className="wrap"
             style={{
-              fontFamily: DISPLAY_FONT,
-              fontSize: 'clamp(1.75rem, 4vw, 2.75rem)',
-              margin: 0,
-              letterSpacing: '-0.02em',
+              height: '100%',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 'clamp(20px, 4vh, 40px)',
+              paddingTop: 'clamp(96px, 13vh, 140px)',
+              paddingBottom: 'clamp(24px, 5vh, 48px)',
+              margin: '0 auto',
             }}
           >
-            Project Space
-          </h2>
-          <p
-            style={{
-              fontFamily: BODY_FONT,
-              margin: '0.35rem 0 0',
-              fontSize: '0.9rem',
-              opacity: 0.75,
-              maxWidth: '26rem',
-            }}
-          >
-            Scroll to fly through the constellation. Hover a node for details.
-          </p>
-        </header>
+            {headline}
+            <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+              {beats.map((beat, i) => (
+                <article
+                  key={beat.id}
+                  ref={(el) => {
+                    beatRefs.current[i] = el
+                  }}
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '16px',
+                    opacity: i === 0 ? 1 : 0,
+                    visibility: i === 0 ? 'visible' : 'hidden',
+                  }}
+                >
+                  <p className="eyebrow" style={{ margin: 0 }}>
+                    {beat.label}
+                  </p>
+                  <div
+                    style={{
+                      display: 'flex',
+                      height: 'clamp(180px, 34vh, 320px)',
+                      width: '100%',
+                    }}
+                  >
+                    {beat.manual ? (
+                      <div
+                        ref={(el) => {
+                          manualRefs.current[i] = el
+                        }}
+                        style={{
+                          width: '50%',
+                          paddingRight: '12px',
+                          boxSizing: 'border-box',
+                          overflow: 'hidden',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <ManualCard value={beat.manual} />
+                      </div>
+                    ) : null}
+                    <div
+                      ref={(el) => {
+                        autoRefs.current[i] = el
+                      }}
+                      style={{
+                        width: '50%',
+                        boxSizing: 'border-box',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <AutomatedCard value={beat.automated} />
+                    </div>
+                  </div>
+                  <BeatCaption beat={beat} />
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
-    </section>
+      <div className="wrap">{cta}</div>
+    </Section>
   )
 }
