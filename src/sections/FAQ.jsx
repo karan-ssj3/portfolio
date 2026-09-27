@@ -1,9 +1,12 @@
 import * as Accordion from '@radix-ui/react-accordion'
+import Section from '../components/Section'
 
+// Copy from content-draft §4 (Q1 to Q6). Dash punctuation is replaced with
+// colons/commas per the site text rule; wording is otherwise unchanged.
 const FAQS = [
   {
     q: 'What does Karan actually do?',
-    a: 'He is a full-stack data scientist and ML engineer who builds production-grade AI systems, autonomous agent frameworks, and data engineering pipelines for enterprise clients. The work runs end to end — raw data, pipelines, models, evaluation, deployment.',
+    a: 'He is a full-stack data scientist and ML engineer who builds production-grade AI systems, autonomous agent frameworks, and data engineering pipelines for enterprise clients. The work runs end to end: raw data, pipelines, models, evaluation, deployment.',
   },
   {
     q: 'Where does he work right now?',
@@ -15,49 +18,62 @@ const FAQS = [
   },
   {
     q: 'How does he prove a system works?',
-    a: 'Every system ships with its own evaluation — retrieval quality (Hit Rate@K, MRR), ranking (Precision@K, Recall@K, NDCG), forecasting (MAPE), classification (AUC), and LLM-as-a-Judge with LangSmith tracing for generative output. Impact is then measured against a baseline, such as 40% faster contract review.',
+    a: 'Every system ships with its own evaluation: retrieval quality (Hit Rate@K, MRR), ranking (Precision@K, Recall@K, NDCG), forecasting (MAPE), classification (AUC), and LLM-as-a-Judge with LangSmith tracing for generative output. Impact is then measured against a baseline, such as 40% faster contract review.',
   },
   {
     q: 'What is his education?',
-    a: "He holds a Master of Data Science and Innovation from UTS — High Distinction in Advanced NLP (88%) and Reinforcement Learning (85%) — plus a Postgraduate Diploma in Computer Science & AI from IIIT-Delhi and a Bachelor of Commerce (Honours) from the University of Delhi. His master's research centred on autonomous ML agents and modular agent frameworks built with LangGraph and OpenAI.",
+    a: "He holds a Master of Data Science and Innovation from UTS, High Distinction in Advanced NLP (88%) and Reinforcement Learning (85%), plus a Postgraduate Diploma in Computer Science & AI from IIIT-Delhi and a Bachelor of Commerce (Honours) from the University of Delhi. His master's research centred on autonomous ML agents and modular agent frameworks built with LangGraph and OpenAI.",
   },
   {
     q: 'Is he available, and what are his rates?',
+    // TODO(Karan): confirm availability/rates copy
     a: 'He is based in Sydney and open to conversations about AI systems, data strategy, consulting engagements, and collaboration.',
   },
 ]
 
 const STYLES = `
 .faq {
-  background: #F5F3EE;
-  color: #1C1B18;
-  padding: 6rem 1.5rem;
-  font-family: 'Inter', system-ui, sans-serif;
+  padding: 120px 0 144px;
 }
 .faq-inner {
-  max-width: 48rem;
+  max-width: 880px;
   margin: 0 auto;
+  padding-inline: clamp(20px, 4vw, 48px);
 }
 .faq-eyebrow {
-  font-family: 'Space Grotesk', 'Inter', sans-serif;
-  font-size: 0.8125rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: #9C5636;
-  margin: 0 0 0.75rem;
+  margin: 0 0 16px;
 }
 .faq-title {
-  font-family: 'Space Grotesk', 'Inter', sans-serif;
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  margin: 0 0 2.5rem;
+  margin: 0 0 48px;
+}
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 .faq-item {
-  border-bottom: 1px solid rgba(28, 27, 24, 0.12);
+  position: relative;
+  overflow: hidden;
+  background: #E4E4D0;
+  color: #1A1A1A;
+  border-radius: var(--radius-card, 24px);
 }
-.faq-item:first-child {
-  border-top: 1px solid rgba(28, 27, 24, 0.12);
+.faq-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #FF6C4C;
+  opacity: 0;
+  transition: opacity 240ms var(--ease-inout);
+}
+.faq-item[data-state="open"]::before {
+  opacity: 1;
+}
+.faq-header {
+  margin: 0;
 }
 .faq-trigger {
   all: unset;
@@ -66,25 +82,24 @@ const STYLES = `
   width: 100%;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.25rem 0.25rem;
+  gap: 24px;
+  padding: 24px 28px;
   cursor: pointer;
-  font-family: 'Space Grotesk', 'Inter', sans-serif;
-  font-size: 1.0625rem;
-  font-weight: 500;
-  color: #1C1B18;
-}
-.faq-trigger:hover {
-  color: #9C5636;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: #1A1A1A;
+  border-radius: var(--radius-card, 24px);
 }
 .faq-trigger:focus-visible {
-  outline: 2px solid #9C5636;
-  outline-offset: 2px;
+  outline: 3px solid #034F46;
+  outline-offset: -3px;
 }
 .faq-icon {
   flex: none;
-  color: #9C5636;
-  transition: transform 200ms ease;
+  transition: transform 240ms var(--ease-inout);
 }
 .faq-item[data-state="open"] .faq-icon {
   transform: rotate(45deg);
@@ -92,52 +107,81 @@ const STYLES = `
 .faq-content {
   overflow: hidden;
 }
-.faq-content-inner {
-  padding: 0 0.25rem 1.5rem;
-  font-size: 0.9375rem;
-  line-height: 1.65;
-  color: #1C1B18;
-  max-width: 42rem;
+.faq-content[data-state="open"] {
+  animation: faq-open 240ms var(--ease-inout);
+}
+.faq-content[data-state="closed"] {
+  animation: faq-close 240ms var(--ease-inout);
+}
+.faq-answer {
+  margin: 0;
+  padding: 0 28px 28px;
+  max-width: 44rem;
+  font-family: 'Figtree', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  color: rgba(26, 26, 26, 0.8);
+}
+@keyframes faq-open {
+  from { height: 0; }
+  to { height: var(--radix-accordion-content-height); }
+}
+@keyframes faq-close {
+  from { height: var(--radix-accordion-content-height); }
+  to { height: 0; }
+}
+@media (max-width: 640px) {
+  .faq { padding: 88px 0 112px; }
+  .faq-trigger { font-size: 21px; padding: 20px 22px; }
+  .faq-answer { padding: 0 22px 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .faq-icon { transition: none; }
+  .faq-content[data-state="open"],
+  .faq-content[data-state="closed"] { animation: none; }
+  .faq-icon,
+  .faq-item::before { transition: none; }
 }
 `
 
 export default function FAQ() {
   return (
-    <section className="faq" aria-labelledby="faq-title">
+    <Section id="faq" tone="cream" className="faq" aria-labelledby="faq-title">
       <style>{STYLES}</style>
       <div className="faq-inner">
-        <p className="faq-eyebrow">FAQ</p>
-        <h2 className="faq-title" id="faq-title">
-          Questions, answered
+        <p className="eyebrow faq-eyebrow">FAQ</p>
+        <h2 className="display d-64 faq-title" id="faq-title">
+          Good <em>questions.</em>
         </h2>
-        <Accordion.Root type="single" defaultValue="faq-0" collapsible>
+        <Accordion.Root
+          className="faq-list"
+          type="single"
+          defaultValue="faq-0"
+          collapsible
+        >
           {FAQS.map(({ q, a }, i) => (
             <Accordion.Item className="faq-item" value={`faq-${i}`} key={q}>
-              <Accordion.Header>
+              <Accordion.Header className="faq-header">
                 <Accordion.Trigger className="faq-trigger">
-                  {q}
+                  <span>{q}</span>
                   <svg
                     className="faq-icon"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 20 20"
                     fill="none"
                     aria-hidden="true"
                   >
-                    <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M10 3v14M3 10h14" stroke="currentColor" strokeWidth="1.5" />
                   </svg>
                 </Accordion.Trigger>
               </Accordion.Header>
               <Accordion.Content className="faq-content">
-                <p className="faq-content-inner">{a}</p>
+                <p className="faq-answer">{a}</p>
               </Accordion.Content>
             </Accordion.Item>
           ))}
         </Accordion.Root>
       </div>
-    </section>
+    </Section>
   )
 }
