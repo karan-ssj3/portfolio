@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const LINKS = [
   { to: '/',           label: 'Home' },
@@ -10,12 +10,21 @@ const LINKS = [
 ]
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false)
+  const [scrolled,   setScrolled]   = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   return (
-    <nav className="navbar">
-      <NavLink to="/" className="nav-logo" onClick={() => setOpen(false)}>
-        KB<span>// Karan Bhutani</span>
+    <nav className={`nav${scrolled ? ' nav-scrolled' : ''}`}>
+      <NavLink to="/" className="nav-logo" onClick={() => setMobileOpen(false)}>
+        <span className="nav-logo-mark">KB</span>
+        <span className="nav-logo-divider" />
+        <span className="nav-logo-name">Karan Bhutani</span>
       </NavLink>
 
       <ul className="nav-links">
@@ -23,8 +32,8 @@ export default function Navbar() {
           <li key={to}>
             <NavLink
               to={to}
-              className={({ isActive }) => isActive ? 'active' : ''}
               end={to === '/'}
+              className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
             >
               {label}
             </NavLink>
@@ -33,35 +42,24 @@ export default function Navbar() {
       </ul>
 
       <button
-        className="nav-menu-btn"
-        onClick={() => setOpen(o => !o)}
+        className="nav-hamburger"
+        onClick={() => setMobileOpen(o => !o)}
         aria-label="Menu"
       >
-        <span style={{ transform: open ? 'rotate(45deg) translate(4px,4px)' : 'none' }} />
-        <span style={{ opacity: open ? 0 : 1 }} />
-        <span style={{ transform: open ? 'rotate(-45deg) translate(4px,-4px)' : 'none' }} />
+        <span style={{ transform: mobileOpen ? 'rotate(45deg) translate(4px,4px)' : 'none' }} />
+        <span style={{ opacity: mobileOpen ? 0 : 1 }} />
+        <span style={{ transform: mobileOpen ? 'rotate(-45deg) translate(4px,-4px)' : 'none' }} />
       </button>
 
-      {/* Mobile menu */}
-      {open && (
-        <div style={{
-          position: 'fixed',
-          top: '56px', left: 0, right: 0,
-          background: 'rgba(5,5,16,.97)',
-          backdropFilter: 'blur(24px)',
-          borderBottom: '1px solid rgba(0,245,255,.15)',
-          padding: '1.5rem 2rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1.2rem',
-          zIndex: 998,
-        }}>
+      {mobileOpen && (
+        <div className="nav-mobile-menu">
           {LINKS.map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
-              onClick={() => setOpen(false)}
-              style={{ fontFamily: 'var(--mono)', fontSize: '.85rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'rgba(148,163,184,.85)' }}
+              end={to === '/'}
+              className={({ isActive }) => `nav-mobile-link${isActive ? ' nav-link-active' : ''}`}
+              onClick={() => setMobileOpen(false)}
             >
               {label}
             </NavLink>

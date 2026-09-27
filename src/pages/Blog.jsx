@@ -1,91 +1,240 @@
-import { useState, useEffect } from 'react'
-import { useReveal } from '../hooks/useReveal'
+import { useState, useRef, useEffect } from 'react'
 
-const RSS_URL = 'https://api.rss2json.com/v1/api.json?rss_url=https://medium.com/feed/@karanbhutani477'
+const ACCENT_MAP = {
+  accent: { color: '#4F46E5', light: '#EEF2FF', border: 'rgba(79,70,229,.2)' },
+  purple: { color: '#8B5CF6', light: '#F5F3FF', border: 'rgba(139,92,246,.2)' },
+  teal:   { color: '#0D9488', light: '#F0FDFA', border: 'rgba(13,148,136,.2)' },
+}
 
-function BlogCard({ post, delay }) {
+const STATIC_POSTS = [
+  {
+    id: 1,
+    title: 'Your LangGraph Agent Already Does What You Think MCP Does',
+    excerpt: "A developer's journey from confusion to clarity about the Model Context Protocol. I spent an hour yesterday trying to understand MCP and here's what I found.",
+    date: '9 Nov 2025',
+    readTime: '5 min read',
+    categories: ['AI Agents', 'LangGraph'],
+    accent: 'accent',
+    gradient: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #2DD4BF 100%)',
+    link: 'https://medium.com/@karanbhutani477',
+  },
+  {
+    id: 2,
+    title: 'The Unbundling of Apps: Why Your DoorDash Account Might Become Obsolete',
+    excerpt: "We laughed at ecommerce. We'll be wrong about AI agents too. Remember when people said nobody would buy shoes online?",
+    date: '1 Nov 2025',
+    readTime: '5 min read',
+    categories: ['AI', 'Future Tech'],
+    accent: 'purple',
+    gradient: 'linear-gradient(135deg, #8B5CF6 0%, #DB2777 50%, #F59E0B 100%)',
+    link: 'https://medium.com/@karanbhutani477',
+  },
+  {
+    id: 3,
+    title: "LangSmith's No-Code Builder: The Control Plane vs. The Configuration",
+    excerpt: 'Why LangGraph Engineers Must Pay Attention to LangSmith\'s No-Code Builder. For engineers who have embraced the agent revolution.',
+    date: '1 Nov 2025',
+    readTime: '5 min read',
+    categories: ['LangSmith', 'MLOps'],
+    accent: 'teal',
+    gradient: 'linear-gradient(135deg, #0D9488 0%, #4F46E5 50%, #8B5CF6 100%)',
+    link: 'https://medium.com/@karanbhutani477',
+  },
+  {
+    id: 4,
+    title: 'Building Production RAG Systems: Lessons from the Trenches',
+    excerpt: 'After deploying RAG in enterprise settings, here are the patterns that actually work and the anti-patterns that will sink your project.',
+    date: 'Oct 2025',
+    readTime: '7 min read',
+    categories: ['RAG', 'Production ML'],
+    accent: 'accent',
+    gradient: 'linear-gradient(135deg, #1E40AF 0%, #4F46E5 50%, #0D9488 100%)',
+    link: 'https://medium.com/@karanbhutani477',
+  },
+  {
+    id: 5,
+    title: 'Autonomous Agents Need Guardrails, Not Freedom',
+    excerpt: 'The paradox of building reliable autonomous systems: the more constraints you add, the more capable they become.',
+    date: 'Sep 2025',
+    readTime: '6 min read',
+    categories: ['AI Agents', 'Architecture'],
+    accent: 'purple',
+    gradient: 'linear-gradient(135deg, #7C3AED 0%, #EC4899 50%, #F97316 100%)',
+    link: 'https://medium.com/@karanbhutani477',
+  },
+  {
+    id: 6,
+    title: 'From Commerce to Code: My Non-Linear Path into AI',
+    excerpt: 'A B.Com graduate\'s journey through data science, machine learning, and eventually building autonomous AI systems at scale.',
+    date: 'Aug 2025',
+    readTime: '8 min read',
+    categories: ['Career', 'Personal'],
+    accent: 'teal',
+    gradient: 'linear-gradient(135deg, #0F766E 0%, #4F46E5 50%, #A855F7 100%)',
+    link: 'https://medium.com/@karanbhutani477',
+  },
+]
+
+function useVisible(threshold = 0.1) {
+  const ref = useRef(null)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); obs.disconnect() } },
+      { threshold }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [threshold])
+  return [ref, visible]
+}
+
+function FeaturedCard({ post }) {
+  const [ref, visible] = useVisible()
+  const colors = ACCENT_MAP[post.accent]
+
   return (
     <a
+      ref={ref}
       href={post.link}
       target="_blank"
       rel="noreferrer"
-      className={`blog-card reveal reveal-d${delay}`}
+      className={`blog-featured${visible ? ' blog-visible' : ''}`}
+      style={{ display: 'grid' }}
     >
-      {post.thumbnail
-        ? <img className="blog-img" src={post.thumbnail} alt={post.title} loading="lazy" />
-        : <div className="blog-placeholder">✦</div>
-      }
-      <div className="blog-body">
+      <div className="blog-featured-thumb" style={{ background: post.gradient }}>
+        <div className="blog-featured-overlay" />
+        <div className="blog-featured-badge">Latest Post</div>
+      </div>
+      <div className="blog-featured-body">
         <div className="blog-meta">
-          <span>{new Date(post.pubDate).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
-          <span className="blog-meta-dot">·</span>
-          <span>{post.readTime || '5 min read'}</span>
+          <span className="blog-date">{post.date}</span>
+          <span className="blog-dot-sep" />
+          <span className="blog-read-time">{post.readTime}</span>
         </div>
-        <h3 className="blog-title">{post.title}</h3>
-        <p className="blog-excerpt">{post.description?.replace(/<[^>]*>/g, '').slice(0, 160)}…</p>
-        {post.categories?.length > 0 && (
-          <div className="blog-tags">
-            {post.categories.slice(0, 3).map(t => <span key={t} className="badge badge-p">{t}</span>)}
-          </div>
-        )}
-        <span className="blog-read-more">Read on Medium <span>→</span></span>
+        <h2 className="blog-featured-title">{post.title}</h2>
+        <p className="blog-featured-excerpt">{post.excerpt}</p>
+        <div className="blog-categories">
+          {post.categories.map(cat => (
+            <span key={cat} className="blog-cat" style={{ color: colors.color, background: colors.light, borderColor: colors.border }}>
+              {cat}
+            </span>
+          ))}
+        </div>
+        <span className="blog-read-link" style={{ color: colors.color }}>
+          Read on Medium <span className="blog-arrow">→</span>
+        </span>
       </div>
     </a>
   )
 }
 
-const FALLBACK = [
-  { title: 'Building Production RAG Systems with LangChain', link: 'https://medium.com/@karanbhutani477', pubDate: '2025-01-01', description: 'A deep dive into building retrieval-augmented generation systems that actually work in production, with lessons from real deployments.', categories: ['AI', 'RAG', 'LangChain'] },
-  { title: 'Autonomous AI Agents: From Prototype to Production', link: 'https://medium.com/@karanbhutani477', pubDate: '2024-11-01', description: 'How to design, build, and deploy autonomous agent systems that handle real workloads without falling apart.', categories: ['LangGraph', 'Agents', 'Python'] },
-  { title: 'Data Engineering with dbt Cloud and Airflow', link: 'https://medium.com/@karanbhutani477', pubDate: '2024-09-01', description: 'Implementing medallion architecture with Apache Airflow orchestration and dbt Cloud transformations at scale.', categories: ['Data Engineering', 'dbt', 'Airflow'] },
+function BlogCard({ post, index }) {
+  const [ref, visible] = useVisible()
+  const colors = ACCENT_MAP[post.accent]
+
+  return (
+    <a
+      ref={ref}
+      href={post.link}
+      target="_blank"
+      rel="noreferrer"
+      className={`blog-card${visible ? ' blog-visible' : ''}`}
+      style={{ animationDelay: `${index * 100}ms` }}
+    >
+      <div className="blog-card-thumb" style={{ background: post.gradient }}>
+        <div className="blog-card-thumb-pattern">
+          <svg viewBox="0 0 200 120" style={{ width: '100%', height: '100%', opacity: 0.2 }}>
+            <circle cx="160" cy="60" r="40" fill="none" stroke="white" strokeWidth=".8" />
+            <circle cx="160" cy="60" r="20" fill="none" stroke="white" strokeWidth=".5" />
+            <line x1="40" y1="90" x2="160" y2="60" stroke="white" strokeWidth=".3" strokeDasharray="4 4" />
+          </svg>
+        </div>
+      </div>
+      <div className="blog-card-body">
+        <div className="blog-meta">
+          <span className="blog-date">{post.date}</span>
+          <span className="blog-dot-sep" />
+          <span className="blog-read-time">{post.readTime}</span>
+        </div>
+        <h3 className="blog-card-title">{post.title}</h3>
+        <p className="blog-card-excerpt">{post.excerpt}</p>
+        <div className="blog-categories">
+          {post.categories.map(cat => (
+            <span key={cat} className="blog-cat" style={{ color: colors.color, background: colors.light, borderColor: colors.border }}>
+              {cat}
+            </span>
+          ))}
+        </div>
+      </div>
+    </a>
+  )
+}
+
+const RSS_URL = 'https://api.rss2json.com/v1/api.json?rss_url=https://medium.com/feed/@karanbhutani477'
+const ACCENTS = ['accent', 'purple', 'teal']
+const GRADIENTS = [
+  'linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #2DD4BF 100%)',
+  'linear-gradient(135deg, #8B5CF6 0%, #DB2777 50%, #F59E0B 100%)',
+  'linear-gradient(135deg, #0D9488 0%, #4F46E5 50%, #8B5CF6 100%)',
 ]
 
 export default function Blog() {
-  const [posts,   setPosts]   = useState([])
+  const [posts,   setPosts]   = useState(STATIC_POSTS)
   const [loading, setLoading] = useState(true)
-  useReveal()
 
   useEffect(() => {
     fetch(RSS_URL)
       .then(r => r.json())
       .then(d => {
-        if (d.status === 'ok' && d.items?.length) setPosts(d.items.slice(0, 6))
-        else setPosts(FALLBACK)
+        if (d.status === 'ok' && d.items?.length) {
+          const enriched = d.items.slice(0, 6).map((item, i) => ({
+            id: i + 1,
+            title: item.title,
+            excerpt: item.description?.replace(/<[^>]*>/g, '').slice(0, 180),
+            date: new Date(item.pubDate).toLocaleDateString('en-AU', { year: 'numeric', month: 'short', day: 'numeric' }),
+            readTime: `${Math.max(3, Math.round((item.description?.split(' ').length || 600) / 200))} min read`,
+            categories: item.categories?.slice(0, 3) || [],
+            accent: ACCENTS[i % 3],
+            gradient: GRADIENTS[i % 3],
+            link: item.link,
+          }))
+          setPosts(enriched)
+        }
       })
-      .catch(() => setPosts(FALLBACK))
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
 
+  const [featured, ...rest] = posts
+
   return (
-    <div className="page-bg">
+    <>
       <div className="page-hero">
-        <span className="section-label reveal">// Writing</span>
-        <h1 className="section-title gradient-text reveal reveal-d1">Blog</h1>
-        <p className="reveal reveal-d2" style={{ color: 'var(--text-dim)', marginTop: '.5rem' }}>
-          Thoughts on AI, data science, and the future of technology
-        </p>
-        <a
-          href="https://medium.com/@karanbhutani477"
-          target="_blank"
-          rel="noreferrer"
-          className="btn btn-cyan reveal reveal-d3"
-          style={{ marginTop: '1.5rem', display: 'inline-flex' }}
-        >
-          All Posts on Medium ↗
+        <div className="page-label">// Writing</div>
+        <h1 className="page-title">Blog</h1>
+        <p className="page-subtitle">Thoughts on AI, data science, and the future of technology</p>
+        <a href="https://medium.com/@karanbhutani477" target="_blank" rel="noreferrer" className="medium-btn">
+          All Posts on Medium →
         </a>
       </div>
 
-      <div className="section" style={{ paddingTop: 0 }}>
-        {loading ? (
-          <p style={{ color: 'var(--text-dim)', fontFamily: 'var(--mono)', textAlign: 'center', letterSpacing: '2px' }}>
-            // loading posts...
-          </p>
-        ) : (
-          <div className="blog-grid">
-            {posts.map((p, i) => <BlogCard key={i} post={p} delay={(i % 3) + 1} />)}
+      {loading ? (
+        <p style={{ textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text-muted)', padding: '4rem 0' }}>
+          // loading posts...
+        </p>
+      ) : (
+        <>
+          <div style={{ padding: '0 24px' }}>
+            <FeaturedCard post={featured} />
           </div>
-        )}
-      </div>
-    </div>
+          <div className="blog-grid">
+            {rest.map((post, i) => <BlogCard key={post.id} post={post} index={i} />)}
+          </div>
+        </>
+      )}
+    </>
   )
 }

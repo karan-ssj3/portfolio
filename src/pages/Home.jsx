@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import ParticleCanvas from '../components/ParticleCanvas'
-import { useReveal } from '../hooks/useReveal'
+import GrainCanvas from '../components/GrainCanvas'
 
-/* ── Typewriter ─────────────────────────────────────────────── */
 const ROLES = [
   'AI & Data Consultant',
   'RAG Systems Engineer',
@@ -11,47 +9,50 @@ const ROLES = [
   'ML Platform Builder',
 ]
 
+const STATS = [
+  { value: 2,    suffix: '+',   label: 'Years Consulting',   accent: 'var(--accent)' },
+  { value: 10,   suffix: '+',   label: 'AI Systems Built',   accent: 'var(--purple)' },
+  { value: 70,   suffix: '%',   label: 'Manual Work Reduced', accent: 'var(--teal)' },
+  { value: 280,  suffix: '+',   label: 'Stakeholders Led',   accent: 'var(--accent)' },
+]
+
+const SKILLS = {
+  accent: ['Python', 'LangChain', 'LangGraph', 'RAG / FAISS'],
+  purple: ['PyTorch', 'TensorFlow', 'SQL', 'Apache Airflow'],
+  teal:   ['dbt Cloud', 'GCP', 'AWS', 'Azure'],
+  accent2:['Tableau', 'Power BI', 'Docker', 'Git'],
+}
+
 function Typewriter() {
-  const [text,      setText]      = useState('')
-  const [roleIdx,   setRoleIdx]   = useState(0)
-  const [charIdx,   setCharIdx]   = useState(0)
-  const [deleting,  setDeleting]  = useState(false)
-  const [paused,    setPaused]    = useState(false)
+  const [text,     setText]     = useState('')
+  const [roleIdx,  setRoleIdx]  = useState(0)
+  const [charIdx,  setCharIdx]  = useState(0)
+  const [deleting, setDeleting] = useState(false)
+  const [paused,   setPaused]   = useState(false)
 
   useEffect(() => {
     if (paused) {
-      const t = setTimeout(() => { setPaused(false); setDeleting(true) }, 1800)
+      const t = setTimeout(() => { setPaused(false); setDeleting(true) }, 2200)
       return () => clearTimeout(t)
     }
     const role  = ROLES[roleIdx]
-    const speed = deleting ? 40 : 78
+    const speed = deleting ? 40 : 80
     const t = setTimeout(() => {
       if (!deleting) {
-        if (charIdx < role.length) {
-          setText(role.slice(0, charIdx + 1)); setCharIdx(c => c + 1)
-        } else {
-          setPaused(true)
-        }
+        if (charIdx < role.length) { setText(role.slice(0, charIdx + 1)); setCharIdx(c => c + 1) }
+        else setPaused(true)
       } else {
-        if (charIdx > 0) {
-          setText(role.slice(0, charIdx - 1)); setCharIdx(c => c - 1)
-        } else {
-          setDeleting(false); setRoleIdx(i => (i + 1) % ROLES.length)
-        }
+        if (charIdx > 0) { setText(role.slice(0, charIdx - 1)); setCharIdx(c => c - 1) }
+        else { setDeleting(false); setRoleIdx(i => (i + 1) % ROLES.length) }
       }
     }, speed)
     return () => clearTimeout(t)
   }, [text, charIdx, deleting, paused, roleIdx])
 
-  return (
-    <span>
-      {text}<span className="tw-cursor">|</span>
-    </span>
-  )
+  return <span>{text}<span className="hero-cursor" /></span>
 }
 
-/* ── Animated stat counter ──────────────────────────────────── */
-function StatCounter({ value, suffix = '', label, color, rgb, delay = 0 }) {
+function StatCounter({ value, suffix, label, accent, delay }) {
   const [count,   setCount]   = useState(0)
   const [started, setStarted] = useState(false)
   const ref = useRef()
@@ -59,7 +60,7 @@ function StatCounter({ value, suffix = '', label, color, rgb, delay = 0 }) {
   useEffect(() => {
     const io = new IntersectionObserver(
       ([e]) => { if (e.isIntersecting) setStarted(true) },
-      { threshold: 0.5 }
+      { threshold: 0.3 }
     )
     if (ref.current) io.observe(ref.current)
     return () => io.disconnect()
@@ -67,156 +68,176 @@ function StatCounter({ value, suffix = '', label, color, rgb, delay = 0 }) {
 
   useEffect(() => {
     if (!started) return
-    const steps = 60, dur = 1600
-    let n = 0
-    const inc = value / steps
-    const timer = setInterval(() => {
-      n += inc
-      if (n >= value) { setCount(value); clearInterval(timer) }
-      else setCount(Math.floor(n))
-    }, dur / steps)
-    return () => clearInterval(timer)
-  }, [started, value])
+    const dur = 1800
+    const startTime = performance.now()
+    const t = setTimeout(() => {
+      const animate = (now) => {
+        const p = Math.min((now - startTime) / dur, 1)
+        const eased = 1 - Math.pow(1 - p, 4)
+        setCount(Math.floor(eased * value))
+        if (p < 1) requestAnimationFrame(animate)
+        else setCount(value)
+      }
+      requestAnimationFrame(animate)
+    }, delay)
+    return () => clearTimeout(t)
+  }, [started, value, delay])
 
   return (
-    <div
-      ref={ref}
-      className="stat-box reveal"
-      style={{
-        '--stat-color': color,
-        '--stat-glow':  `${color}80`,
-        '--stat-rgb':   rgb,
-        animationDelay: `${delay}s`,
-      }}
-    >
-      <div className="stat-number">{count}{suffix}</div>
-      <div className="stat-label">{label}</div>
+    <div ref={ref} className="stat-card" style={{ '--stat-accent': accent }}>
+      <span className="stat-value">{count}{suffix}</span>
+      <span className="stat-label">{label}</span>
+      {started && <div className="stat-bar" style={{ animationDelay: `${delay + 600}ms` }} />}
     </div>
   )
 }
 
-/* ── Skills ─────────────────────────────────────────────────── */
-const SKILLS = [
-  { label: 'Python',             cls: 'badge badge-c' },
-  { label: 'LangChain',          cls: 'badge badge-c' },
-  { label: 'LangGraph',          cls: 'badge badge-c' },
-  { label: 'RAG Systems',        cls: 'badge badge-c' },
-  { label: 'Azure OpenAI',       cls: 'badge badge-c' },
-  { label: 'FAISS',              cls: 'badge badge-c' },
-  { label: 'Autonomous Agents',  cls: 'badge badge-p' },
-  { label: 'Machine Learning',   cls: 'badge badge-p' },
-  { label: 'NLP',                cls: 'badge badge-p' },
-  { label: 'Apache Airflow',     cls: 'badge badge-p' },
-  { label: 'dbt Cloud',          cls: 'badge badge-p' },
-  { label: 'Google Cloud',       cls: 'badge badge-m' },
-  { label: 'Azure ML',           cls: 'badge badge-m' },
-  { label: 'Strategic Consulting', cls: 'badge badge-m' },
-  { label: 'SHAP / LIME',        cls: 'badge badge-g' },
-  { label: 'Vector DBs',         cls: 'badge badge-g' },
-]
-
-/* ── Explore cards ──────────────────────────────────────────── */
 const EXPLORE = [
-  { to: '/projects',   icon: '⬡', title: 'Projects',   desc: 'Production AI systems, RAG pipelines & data engineering',        accent: 'var(--cyan)'    },
-  { to: '/experience', icon: '◈', title: 'Experience',  desc: 'My professional journey at Deloitte, Synogize and beyond',       accent: 'var(--purple)'  },
-  { to: '/blog',       icon: '◉', title: 'Blog',        desc: 'Deep dives on AI, data science and emerging technology',         accent: 'var(--magenta)' },
+  { to: '/projects',   icon: '⬡', title: 'Projects',   desc: 'Production AI systems, RAG pipelines & data engineering', accent: 'var(--accent)' },
+  { to: '/experience', icon: '◈', title: 'Experience',  desc: 'My professional journey at Deloitte, Synogize and UTS',   accent: 'var(--purple)' },
+  { to: '/blog',       icon: '◉', title: 'Blog',        desc: 'Deep dives on AI, data science and emerging technology',  accent: 'var(--teal)' },
 ]
 
-/* ── Page ───────────────────────────────────────────────────── */
 export default function Home() {
-  useReveal()
-
   return (
-    <div>
-      {/* ── Hero ───────────────────────────────────────────── */}
+    <>
+      <GrainCanvas />
+
+      {/* ── Hero ── */}
       <section className="hero">
-        <div className="orb orb-1" />
-        <div className="orb orb-2" />
-        <div className="orb orb-3" />
-        <div className="particles" />
-        <div className="sweep" />
-        <div className="star star-c star-1" />
-        <div className="star star-p star-2" />
-        <div className="star star-c star-3" />
-        <div className="star star-m star-4" />
-        <div className="star star-c star-5" />
-        <ParticleCanvas />
+        <div className="hero-bg">
+          <div className="hero-grid" />
+          <div className="hero-orb hero-orb-1" />
+          <div className="hero-orb hero-orb-2" />
+          <div className="hero-orb hero-orb-3" />
+        </div>
 
         <div className="hero-content">
-          <span className="hero-label">// AI & Data Consultant · Deloitte · Sydney, AU</span>
-          <h1 className="hero-name">Karan Bhutani</h1>
-          <p className="hero-role"><Typewriter /></p>
+          <div className="hero-eyebrow">
+            <span className="hero-eyebrow-dot" />
+            AI & Data Consultant · Deloitte · Sydney, AU
+          </div>
+
+          <h1 className="hero-name">
+            Karan<br /><em>Bhutani</em>
+          </h1>
+
+          <div className="hero-role"><Typewriter /></div>
+
           <p className="hero-tagline">
-            Transforming data into intelligence. Building AI systems that scale from prototype to production.
+            Transforming data into intelligence. Building AI systems that scale
+            from prototype to production.
           </p>
+
           <div className="hero-ctas">
-            <Link to="/projects" className="btn btn-cyan">View Projects</Link>
-            <Link to="/contact"  className="btn btn-purple">Contact Me</Link>
+            <Link to="/projects" className="btn btn-primary">
+              View Projects <span className="btn-arrow">→</span>
+            </Link>
+            <Link to="/contact" className="btn btn-outline">
+              Get In Touch
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Stats ──────────────────────────────────────────── */}
-      <div className="stats-grid" style={{ paddingTop: '3rem' }}>
-        <StatCounter value={2}   suffix="+"  label="years consulting"    color="#00f5ff" rgb="0,245,255"   delay={0.1} />
-        <StatCounter value={10}  suffix="+"  label="AI systems built"    color="#a855f7" rgb="168,85,247"  delay={0.2} />
-        <StatCounter value={70}  suffix="%"  label="manual work reduced" color="#ff00ff" rgb="255,0,255"   delay={0.3} />
-        <StatCounter value={280} suffix="+"  label="stakeholders led"    color="#00ff88" rgb="0,255,136"   delay={0.4} />
-      </div>
+      {/* ── Stats ── */}
+      <section className="stats-section">
+        <div className="stats-grid">
+          {STATS.map((s, i) => (
+            <StatCounter key={s.label} {...s} delay={i * 120} />
+          ))}
+        </div>
+      </section>
 
-      {/* ── About ──────────────────────────────────────────── */}
-      <div className="section-alt">
-        <div className="section" style={{ textAlign: 'center' }}>
-          <span className="section-label reveal">// About Me</span>
-          <h2 className="section-title reveal reveal-d1">Who I Am</h2>
-          <p className="reveal reveal-d2" style={{ color: 'var(--text-dim)', maxWidth: 760, margin: '0 auto', fontSize: '1.05rem', lineHeight: 1.85 }}>
-            I'm a Data and AI Consultant at Deloitte, specialising in production-ready RAG systems, autonomous AI agents,
-            and cloud data engineering. With experience across ASX 200 clients in financial services, manufacturing, and
-            technology, I bridge the gap between cutting-edge AI research and real-world business value.
-          </p>
+      <div className="section-divider" />
 
-          {/* Education */}
-          <div className="glass reveal reveal-d3" style={{ maxWidth: 700, margin: '2.5rem auto 0', padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', alignItems: 'flex-start' }}>
-              <div style={{ textAlign: 'left' }}>
-                <p className="neon-c" style={{ fontWeight: 700, fontSize: '1.05rem' }}>Masters in Data Science &amp; Innovation</p>
-                <p style={{ color: 'var(--text-dim)', fontSize: '.95rem', marginTop: '.25rem' }}>University of Technology Sydney</p>
-                <p className="neon-p" style={{ fontFamily: 'var(--mono)', fontSize: '.85rem', marginTop: '.25rem' }}>CGPA: 6.11 / 7.0</p>
+      {/* ── About ── */}
+      <section className="about-section">
+        <div className="about-container">
+          <div>
+            <div className="about-label">// About</div>
+            <h2 className="about-heading">
+              Building <em>intelligent</em> systems<br />at enterprise scale
+            </h2>
+            <p className="about-text">
+              Data and AI Consultant at Deloitte Australia, specialising in production RAG systems,
+              autonomous agent frameworks, and ML platform engineering. From asset health prediction
+              for mining clients to AI strategy workshops with 280+ stakeholders, I bridge the gap
+              between cutting-edge research and real-world deployment.
+            </p>
+          </div>
+
+          <div className="edu-card">
+            <div className="edu-card-title">Education</div>
+            <div className="edu-item">
+              <div className="edu-dot" style={{ background: 'var(--accent)' }} />
+              <div>
+                <div className="edu-degree">Master of Data Science & Innovation</div>
+                <div className="edu-school">UTS, Sydney · 2025</div>
               </div>
-              <span style={{ fontFamily: 'var(--mono)', fontSize: '.8rem', color: 'rgba(0,245,255,.55)', letterSpacing: '1px', whiteSpace: 'nowrap' }}>
-                2023 – 2025
-              </span>
+            </div>
+            <div className="edu-item">
+              <div className="edu-dot" style={{ background: 'var(--purple)' }} />
+              <div>
+                <div className="edu-degree">PG Diploma, CS & AI</div>
+                <div className="edu-school">IIIT-Delhi · 2023</div>
+              </div>
+            </div>
+            <div className="edu-item">
+              <div className="edu-dot" style={{ background: 'var(--teal)' }} />
+              <div>
+                <div className="edu-degree">B.Com Honours</div>
+                <div className="edu-school">Delhi University · 2020</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── Skills ─────────────────────────────────────────── */}
-      <div className="section" style={{ textAlign: 'center' }}>
-        <span className="section-label reveal">// Core Competencies</span>
-        <h2 className="section-title reveal reveal-d1">Skills &amp; Technologies</h2>
-        <div className="skills-grid reveal reveal-d2" style={{ marginTop: '1.5rem' }}>
-          {SKILLS.map(s => <span key={s.label} className={s.cls}>{s.label}</span>)}
+      <div className="section-divider" />
+
+      {/* ── Skills ── */}
+      <section className="skills-section">
+        <div className="skills-container">
+          <div className="skills-header">
+            <div className="about-label">// Tech Stack</div>
+            <h2 className="section-heading">Tools of the trade</h2>
+          </div>
+          <div className="skills-grid">
+            {SKILLS.accent.map(s  => <span key={s} className="skill-badge badge-accent">{s}</span>)}
+            {SKILLS.purple.map(s  => <span key={s} className="skill-badge badge-purple">{s}</span>)}
+            {SKILLS.teal.map(s    => <span key={s} className="skill-badge badge-teal">{s}</span>)}
+            {SKILLS.accent2.map(s => <span key={s} className="skill-badge badge-accent">{s}</span>)}
+          </div>
         </div>
-      </div>
+      </section>
 
-      {/* ── Explore ────────────────────────────────────────── */}
-      <div className="section-alt">
-        <div className="section" style={{ textAlign: 'center' }}>
-          <span className="section-label reveal">// Navigate</span>
-          <h2 className="section-title reveal reveal-d1">Explore My Work</h2>
-          <div className="explore-grid reveal reveal-d2" style={{ marginTop: '2rem' }}>
-            {EXPLORE.map(c => (
-              <Link key={c.to} to={c.to} className="explore-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-                <span className="explore-icon">{c.icon}</span>
-                <span className="explore-title" style={{ color: c.accent, textShadow: `0 0 8px ${c.accent}55` }}>{c.title}</span>
-                <span className="explore-desc">{c.desc}</span>
-                <span className="explore-arrow" style={{ color: c.accent }}>→ explore</span>
+      {/* ── Explore ── */}
+      <section className="explore-section">
+        <div className="explore-container">
+          <div className="explore-header">
+            <div className="about-label">// Navigate</div>
+            <h2 className="section-heading">Explore my work</h2>
+          </div>
+          <div className="explore-grid">
+            {EXPLORE.map(card => (
+              <Link
+                key={card.to}
+                to={card.to}
+                className="explore-card"
+                style={{ '--card-accent': card.accent }}
+              >
+                <span className="explore-icon" style={{ color: card.accent }}>{card.icon}</span>
+                <div className="explore-card-title">{card.title}</div>
+                <div className="explore-card-desc">{card.desc}</div>
+                <div className="explore-card-link" style={{ color: card.accent }}>
+                  Explore <span className="btn-arrow">→</span>
+                </div>
               </Link>
             ))}
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </>
   )
 }
