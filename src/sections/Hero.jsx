@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import PillButton from '../components/PillButton'
-import StatusChips from '../components/StatusChips'
+import SignalRibbon from '../components/SignalRibbon'
 import { splitWords, useReveal } from '../hooks/useReveal'
 
 const CREAM = '#FFFFEB'
@@ -16,8 +16,9 @@ const PROJECTS_PATH = '/projects'
  *
  * Cream slab carrying the ALL-ROUNDER / AI ENGINEER headline (same uppercase
  * display treatment as before, ink on cream), the lede with a word reveal, the
- * two CTAs and the curved pipeline-log status chips. No 3D, particles or
- * grain. Bottom padding leaves room for the Deep Layers ink slab overlap.
+ * two CTAs and the signal ribbon (raw sound wave in, skills and projects out).
+ * No 3D, particles or grain. Bottom padding leaves room for the Deep Layers
+ * ink slab overlap.
  */
 export default function Hero() {
   const navigate = useNavigate()
@@ -120,8 +121,8 @@ export default function Hero() {
         </div>
       </div>
 
-      <div style={{ width: '100%', marginTop: 'clamp(2rem, 6vh, 4rem)' }}>
-        <StatusChips />
+      <div style={{ width: '100%', marginTop: 'clamp(1.5rem, 4vh, 3rem)' }}>
+        <SignalRibbon />
       </div>
     </section>
   )

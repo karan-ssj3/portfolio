@@ -1,0 +1,92 @@
+.signal-ribbon {
+  position: relative;
+  width: 100%;
+  height: 280px;
+  overflow: hidden;
+}
+@media (max-width: 639px) {
+  .signal-ribbon { height: 200px; }
+}
+.signal-ribbon__canvas,
+.signal-ribbon__svg,
+.signal-ribbon__tokens {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.signal-ribbon__svg { overflow: visible; }
+.signal-ribbon__token {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  white-space: nowrap;
+  font-family: 'Figtree', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1;
+  color: #FFFFEB;
+  will-change: transform, opacity, filter;
+}
+.signal-ribbon__token i {
+  font-style: normal;
+  color: #FFA946;
+  margin: 0 14px;
+}
+@media (max-width: 639px) {
+  .signal-ribbon__token { font-size: 16px; }
+  .signal-ribbon__token i { margin: 0 10px; }
+}
+.signal-ribbon__pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 44px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  background: #FFFFEB;
+  border: 1.5px solid #1A1A1A;
+  border-radius: 999px;
+  z-index: 2;
+}
+.signal-ribbon__bar {
+  display: block;
+  width: 3px;
+  height: 24px;
+  border-radius: 2px;
+  background: #1A1A1A;
+  transform: scaleY(0.3);
+}
+.signal-ribbon__chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #034F46;
+  color: #FFFFEB;
+  font-family: 'Figtree', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 3;
+}
+.signal-ribbon__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
