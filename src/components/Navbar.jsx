@@ -107,9 +107,9 @@ export default function Navbar() {
         aria-expanded={mobileOpen}
         aria-controls="mobile-menu"
       >
-        <span style={{ transform: mobileOpen ? 'rotate(45deg) translate(4px,4px)' : 'none' }} />
-        <span style={{ opacity: mobileOpen ? 0 : 1 }} />
-        <span style={{ transform: mobileOpen ? 'rotate(-45deg) translate(4px,-4px)' : 'none' }} />
+        <span aria-hidden="true" style={{ transform: mobileOpen ? 'rotate(45deg) translate(4px,4px)' : 'none' }} />
+        <span aria-hidden="true" style={{ opacity: mobileOpen ? 0 : 1 }} />
+        <span aria-hidden="true" style={{ transform: mobileOpen ? 'rotate(-45deg) translate(4px,-4px)' : 'none' }} />
       </button>
 
       {mobileOpen && (

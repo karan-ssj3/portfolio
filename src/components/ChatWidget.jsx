@@ -166,13 +166,15 @@ export default function ChatWidget() {
       {/* Panel */}
       <div
         ref={panelRef}
+        id="chat-panel"
         className={`cw-panel${open ? ' cw-panel-open' : ''}`}
         role="dialog"
         aria-label="Ask Karan's AI"
         aria-hidden={!open}
+        aria-modal={open ? 'true' : undefined}
       >
         <div className="cw-header">
-          <div className="cw-header-dot" />
+          <div className="cw-header-dot" aria-hidden="true" />
           <div className="cw-header-title">Ask Karan's AI</div>
           <div className="cw-header-badge">RAG-powered</div>
           <button
@@ -184,10 +186,10 @@ export default function ChatWidget() {
           </button>
         </div>
 
-        <div className="cw-messages">
+        <div className="cw-messages" aria-live="polite" aria-label="Chat messages">
           {messages.map((msg, i) => (
             <div key={i} className={`cw-msg cw-msg-${msg.role}${msg.isSystem ? ' cw-msg-system' : ''}`}>
-              <div className={`cw-avatar cw-avatar-${msg.role}`}>
+              <div className={`cw-avatar cw-avatar-${msg.role}`} aria-hidden="true">
                 {msg.role === 'assistant' ? 'K' : '↑'}
               </div>
               <div className={`cw-bubble cw-bubble-${msg.role}`}>
@@ -198,8 +200,8 @@ export default function ChatWidget() {
 
           {loading && (
             <div className="cw-msg cw-msg-assistant">
-              <div className="cw-avatar cw-avatar-assistant">K</div>
-              <div className="cw-typing">
+              <div className="cw-avatar cw-avatar-assistant" aria-hidden="true">K</div>
+              <div className="cw-typing" aria-hidden="true">
                 {[0, 150, 300].map(d => (
                   <span key={d} className="cw-typing-dot" style={{ animationDelay: `${d}ms` }} />
                 ))}
@@ -218,13 +220,14 @@ export default function ChatWidget() {
           </div>
         )}
 
-        {error && <div className="cw-error">{error}</div>}
+        {error && <div className="cw-error" role="alert">{error}</div>}
 
         <div className="cw-input-bar">
           <input
             ref={inputRef}
             className="cw-input"
             placeholder="Ask something..."
+            aria-label="Type your message"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') send() }}
@@ -234,6 +237,7 @@ export default function ChatWidget() {
             className="cw-send"
             onClick={() => send()}
             disabled={loading || !input.trim()}
+            aria-label="Send message"
           >
             →
           </button>
@@ -247,8 +251,9 @@ export default function ChatWidget() {
         onClick={() => setOpen(o => !o)}
         aria-label={open ? 'Close chat' : 'Open chat'}
         aria-expanded={open}
+        aria-controls="chat-panel"
       >
-        <span className="cw-trigger-icon">{open ? '+' : '◈'}</span>
+        <span className="cw-trigger-icon" aria-hidden="true">{open ? '+' : '◈'}</span>
       </button>
     </>
   )
