@@ -4,21 +4,44 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#F5F3EE',
-        foreground: '#1C1B18',
+        lumen: {
+          DEFAULT: '#FFFFEB',
+          dark: '#E4E4D0'
+        },
+        vast: '#1A1A1A',
+        fathom: '#034F46',
+        dawn: '#F0D7FF',
+        signal: '#FFBCF2',
+        glow: '#FFA946',
+        flare: '#FF6C4C',
+        pulse: '#7F1C34',
+        // Legacy aliases (recoloured) so existing class names keep compiling
+        background: '#FFFFEB',
+        foreground: '#1A1A1A',
         accent: {
-          DEFAULT: '#9C5636',
-          hover: '#8A4B2E'
+          DEFAULT: '#034F46',
+          hover: '#1A1A1A'
         },
         border: {
-          DEFAULT: 'rgba(28, 27, 24, 0.12)',
-          strong: 'rgba(28, 27, 24, 0.15)',
-          subtle: 'rgba(28, 27, 24, 0.10)'
+          DEFAULT: 'rgba(26, 26, 26, 0.12)',
+          strong: 'rgba(26, 26, 26, 0.15)',
+          subtle: 'rgba(26, 26, 26, 0.10)'
         }
       },
       fontFamily: {
-        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
-        body: ['"Inter"', 'system-ui', 'sans-serif']
+        serif: ['EB Garamond', 'Georgia', 'serif'],
+        sans: ['Figtree', 'system-ui', 'sans-serif'],
+        // Legacy aliases
+        display: ['EB Garamond', 'Georgia', 'serif'],
+        body: ['Figtree', 'system-ui', 'sans-serif']
+      },
+      borderRadius: {
+        slab: '48px',
+        card: '24px'
+      },
+      transitionTimingFunction: {
+        out: 'cubic-bezier(0.16,1,0.3,1)',
+        inout: 'cubic-bezier(0.65,0,0.35,1)'
       }
     }
   },

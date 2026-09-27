@@ -1,29 +1,49 @@
-/* Self-hosted fonts: Space Grotesk (display) + Inter (body) */
-@import '@fontsource/space-grotesk/500.css';
-@import '@fontsource/space-grotesk/600.css';
-@import '@fontsource/inter/400.css';
-@import '@fontsource/inter/500.css';
+/* Fonts (EB Garamond display + Figtree body) are self-hosted via
+   @fontsource imports in main.jsx */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ============================================================
-   DESIGN TOKENS — approved light palette
+   DESIGN TOKENS — Wispr-derived palette
    ============================================================ */
 :root {
-  --background: #F5F3EE;
-  --foreground: #1C1B18;
-  --accent: #9C5636;
-  --accent-hover: #8A4B2E;
+  --lumen: #FFFFEB;
+  --lumen-dark: #E4E4D0;
+  --vast: #1A1A1A;
+  --fathom: #034F46;
+  --dawn: #F0D7FF;
+  --signal: #FFBCF2;
+  --glow: #FFA946;
+  --flare: #FF6C4C;
+  --pulse: #7F1C34;
 
-  /* Borders: foreground at 10–15% opacity */
-  --border: rgba(28, 27, 24, 0.12);
-  --border-strong: rgba(28, 27, 24, 0.15);
-  --border-subtle: rgba(28, 27, 24, 0.10);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
 
-  --font-display: 'Space Grotesk', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, sans-serif;
+  --radius-slab: 48px;
+  --radius-card: 24px;
+
+  --font-serif: 'EB Garamond', Georgia, serif;
+  --font-sans: 'Figtree', system-ui, sans-serif;
+
+  /* Legacy aliases so existing components keep resolving */
+  --background: var(--lumen);
+  --foreground: var(--vast);
+  --accent: var(--fathom);
+  --accent-hover: var(--vast);
+  --border: rgba(26, 26, 26, 0.12);
+  --border-strong: rgba(26, 26, 26, 0.15);
+  --border-subtle: rgba(26, 26, 26, 0.10);
+  --font-display: var(--font-serif);
+  --font-body: var(--font-sans);
+}
+
+@media (max-width: 639px) {
+  :root {
+    --radius-slab: 32px;
+  }
 }
 
 /* ============================================================
@@ -34,22 +54,24 @@ html {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-body);
+  background: var(--lumen);
+  color: var(--vast);
+  font-family: 'Figtree', system-ui, sans-serif;
+  font-size: 16px;
   font-weight: 400;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   /* clip (not hidden) so body never becomes a scroll container */
   overflow-x: clip;
 }
 
 h1, h2, h3, h4 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.008em;
-  line-height: 1.1;
-  color: var(--foreground);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: inherit;
 }
 
 a {
@@ -64,6 +86,46 @@ img {
 
 button {
   cursor: pointer;
+}
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+.display {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-weight: 400;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.display em {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.d-120 { font-size: clamp(56px, 9vw, 120px); }
+.d-96 { font-size: clamp(48px, 7.5vw, 96px); }
+.d-75 { font-size: clamp(40px, 6vw, 75px); }
+.d-64 { font-size: clamp(36px, 5vw, 64px); }
+.d-48 { font-size: clamp(30px, 3.6vw, 48px); }
+.d-32 { font-size: clamp(24px, 2.5vw, 32px); }
+
+.lede {
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 500;
+}
+
+.eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 600;
+  opacity: 0.6;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
 
 /* ============================================================
@@ -88,27 +150,28 @@ html.lenis body {
 }
 
 /* ============================================================
-   FOCUS — visible accent rings
+   FOCUS — teal on cream, lilac on dark slabs
    ============================================================ */
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 2px;
+  outline: 3px solid var(--fathom);
+  outline-offset: 3px;
+}
+
+[data-tone='ink'] :focus-visible,
+[data-tone='teal'] :focus-visible {
+  outline-color: var(--dawn);
 }
 
 /* ============================================================
    REDUCED MOTION
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
+    animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
   }
 }
