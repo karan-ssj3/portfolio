@@ -5,19 +5,23 @@ import PillButton from '../components/PillButton'
 
 const MEDIUM_URL = 'https://medium.com/@karanbhutani477'
 const STYLE_ID = 'blog-page-styles'
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 const CSS = `
-.blog-header{padding:160px 0 64px}
+.blog-header{padding:clamp(136px,14vw,160px) 0 64px}
 .blog-header .display{margin:0}
+.blog-header .display em{font-style:italic;font-weight:400}
 .blog-body{padding:0 0 120px}
-.blog-list{list-style:none;margin:0;padding:0;border-top:1px solid rgba(26,26,26,.1)}
-.blog-row{position:relative;border-bottom:1px solid rgba(26,26,26,.1)}
+.blog-list{list-style:none;margin:0;padding:0}
+.blog-row{position:relative;margin:0}
+.blog-row + .blog-row{border-top:1px solid rgba(26,26,26,.1)}
 .blog-row::before{content:'';position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:3px;background:#FF6C4C;opacity:0;transition:opacity 180ms var(--ease-out)}
 .blog-row:hover::before,.blog-row:focus-within::before{opacity:1}
-.blog-row-link{display:flex;flex-direction:column;gap:8px;padding:28px 0 28px 24px;color:inherit;text-decoration:none}
+.blog-row-link{display:flex;flex-direction:column;gap:8px;margin:0;padding:24px 0 24px 24px;color:inherit;text-decoration:none}
 .blog-row-title{margin:0;font-family:'EB Garamond',Georgia,serif;font-weight:400;font-size:32px;line-height:1.1;letter-spacing:-0.02em;overflow-wrap:anywhere}
-.blog-row-date{font-family:'Figtree',system-ui,sans-serif;font-size:14px;color:rgba(26,26,26,.6)}
-.blog-skeleton{display:flex;flex-direction:column;gap:12px;padding:28px 0 28px 24px;border-bottom:1px solid rgba(26,26,26,.1)}
+.blog-row-date{display:block;margin:0;font-family:'Figtree',system-ui,sans-serif;font-size:14px;line-height:20px;color:rgba(26,26,26,.85);font-variant-numeric:tabular-nums}
+.blog-skeleton{display:flex;flex-direction:column;gap:8px;margin:0;padding:24px 0 24px 24px}
+.blog-skeleton + .blog-skeleton{border-top:1px solid rgba(26,26,26,.1)}
 .blog-skeleton-bar{display:block;border-radius:8px;background:#E4E4D0;animation:blog-pulse 1.4s var(--ease-inout) infinite alternate}
 .blog-skeleton-bar--title{height:32px;width:min(560px,80%)}
 .blog-skeleton-bar--date{height:14px;width:120px}
@@ -25,7 +29,7 @@ const CSS = `
 @media (prefers-reduced-motion: reduce){.blog-skeleton-bar{animation:none}.blog-row::before{transition:none}}
 .blog-empty{display:flex;flex-direction:column;align-items:flex-start;gap:20px;padding:40px 0}
 .blog-empty p{margin:0;font-size:20px;line-height:26px;font-weight:500}
-@media (max-width:640px){.blog-header{padding-bottom:40px}.blog-row-title{font-size:26px}.blog-row-link,.blog-skeleton{padding-left:18px}}
+@media (max-width:640px){.blog-header{padding-bottom:40px}.blog-row-title{font-size:24px;line-height:1.15}.blog-row-link,.blog-skeleton{padding:20px 0 20px 18px}}
 `
 
 function injectStyles() {
@@ -34,6 +38,18 @@ function injectStyles() {
   el.id = STYLE_ID
   el.textContent = CSS
   document.head.appendChild(el)
+}
+
+// Always render 'D Mon YYYY' with fixed 3-letter months (Intl en-GB yields 'Sept').
+function formatDate(post) {
+  const source = post.isoDate || post.date
+  if (source) {
+    const d = new Date(source)
+    if (!Number.isNaN(d.getTime())) {
+      return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`
+    }
+  }
+  return post.date ? String(post.date).replace(/\bSept\b/g, 'Sep') : ''
 }
 
 const isThenable = (value) => Boolean(value) && typeof value.then === 'function'
@@ -76,6 +92,7 @@ function EmptyState() {
 }
 
 function PostRow({ post }) {
+  const label = formatDate(post)
   return (
     <li className="blog-row">
       <a
@@ -85,9 +102,9 @@ function PostRow({ post }) {
         className="blog-row-link"
       >
         <h2 className="blog-row-title">{post.title}</h2>
-        {post.date && (
+        {label && (
           <time className="blog-row-date" dateTime={post.isoDate || undefined}>
-            {post.date}
+            {label}
           </time>
         )}
       </a>
