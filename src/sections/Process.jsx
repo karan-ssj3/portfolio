@@ -1,10 +1,14 @@
 import { useScrollContext } from '../providers/ScrollProvider'
-import ProcessScene from '../components/three/ProcessScene'
+import CanvasWrapper from '../components/three/CanvasWrapper'
 import { EXPERIENCE } from '../data/experience'
 
 const byId = (id) => EXPERIENCE.find((entry) => entry.id === id)
 const deloitte = byId(1).description
 const synogize = byId(2).description
+
+// Stable loader so CanvasWrapper / useLazy3D see the same reference every render.
+const loadProcessScene = () => import('../components/three/ProcessScene')
+const PROCESS_CANVAS_PROPS = { camera: { position: [0, 0, 5], fov: 45 }, gl: { alpha: true } }
 
 // Phase labels are the four 'How I work' steps from content-draft.md, verbatim.
 // Experience lines reference src/data/experience.js entries by id/index so the
@@ -45,7 +49,12 @@ export default function Process() {
             className={`process-step ${reducedMotion ? 'stacked' : ''}`}
           >
             <div className="process-backdrop" aria-hidden="true">
-              <ProcessScene index={index} />
+              <CanvasWrapper
+                scene={loadProcessScene}
+                sceneProps={{ index }}
+                canvasProps={PROCESS_CANVAS_PROPS}
+                fallbackAlt={`Process step ${index + 1}`}
+              />
             </div>
             <div className="process-content">
               <h3>{phase.label}</h3>

@@ -1,6 +1,5 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
-import CanvasWrapper from './CanvasWrapper'
 
 const INK = '#1C1B18'
 const ACCENT = '#9C5636'
@@ -182,7 +181,14 @@ function FloatingParticles({ count = 120 }) {
   )
 }
 
-function ProcessStepScene({ index }) {
+/**
+ * ProcessScene
+ *
+ * Per-step 3D scene: a dot-matrix step number with an accent period and a
+ * sparse particle field. Uses R3F hooks, so it must be rendered inside a
+ * <Canvas> — mount it through CanvasWrapper, passing `index` via sceneProps.
+ */
+export default function ProcessScene({ index = 0 }) {
   const groupRef = useRef()
 
   useFrame((_, delta) => {
@@ -199,27 +205,5 @@ function ProcessStepScene({ index }) {
       <NumberPointCloud number={numberStr} />
       <FloatingParticles />
     </group>
-  )
-}
-
-/**
- * ProcessScene
- *
- * Thin wrapper that mounts a per-step ProcessStepScene through the shared
- * CanvasWrapper. The wrapper handles lazy loading, viewport intersection,
- * GPU tier fallback, and reduced-motion fallback to a static image.
- */
-export default function ProcessScene({ index }) {
-  const scene = useMemo(
-    () => () => Promise.resolve({ default: () => <ProcessStepScene index={index} /> }),
-    [index],
-  )
-
-  return (
-    <CanvasWrapper
-      scene={scene}
-      canvasProps={{ camera: { position: [0, 0, 5], fov: 45 }, gl: { alpha: true } }}
-      fallbackAlt={`Process step ${index + 1}`}
-    />
   )
 }

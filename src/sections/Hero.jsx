@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import HeroScene from '../components/three/HeroScene'
+import CanvasWrapper from '../components/three/CanvasWrapper'
 import { useScrollContext } from '../providers/ScrollProvider'
 
 const BG = '#F5F3EE'
 const INK = '#1C1B18'
 const ACCENT = '#9C5636'
+
+// Stable loader so CanvasWrapper / useLazy3D see the same reference every render.
+const loadHeroScene = () => import('../components/three/HeroScene')
+const HERO_CANVAS_PROPS = { camera: { position: [0, 0, 6], fov: 50 }, gl: { alpha: true } }
 
 /**
  * Hero
@@ -12,7 +16,9 @@ const ACCENT = '#9C5636'
  * Renders Hero Option A verbatim from content-draft.md section 1 as the
  * semantic <h1>. The 3D scene is mounted only when the GPU tier is high
  * AND the user has not requested reduced motion; otherwise a static
- * gradient fallback is shown.
+ * gradient fallback is shown. The scene is always rendered through
+ * CanvasWrapper so its R3F hooks live inside <Canvas>, and any 3D error
+ * falls back to the same static gradient.
  */
 export default function Hero() {
   const { reducedMotion, gpuTier } = useScrollContext()
@@ -125,7 +131,12 @@ export default function Hero() {
         }}
       >
         {canRender3D && mounted ? (
-          <HeroScene />
+          <CanvasWrapper
+            scene={loadHeroScene}
+            canvasProps={HERO_CANVAS_PROPS}
+            fallback={<StaticGradientFallback />}
+            fallbackAlt="Hero 3D scene placeholder"
+          />
         ) : (
           <StaticGradientFallback />
         )}
@@ -210,8 +221,8 @@ export default function Hero() {
  * StaticGradientFallback
  *
  * A lightweight, decorative gradient shown when the 3D scene is disabled
- * (low GPU tier or reduced motion). Uses only the approved palette and
- * mirrors the visual language of the 3D scene — dark ink on warm paper,
+ * (low GPU tier or reduced motion) or fails. Uses only the approved palette
+ * and mirrors the visual language of the 3D scene — dark ink on warm paper,
  * with a single accent mark.
  */
 function StaticGradientFallback() {

@@ -4,19 +4,26 @@ import useGPU from '../../hooks/useGPU'
 import useReducedMotion from '../../hooks/useReducedMotion'
 import useLazy3D from '../../hooks/useLazy3D'
 import FallbackImage from './FallbackImage'
+import SceneErrorBoundary from './SceneErrorBoundary'
 
 /**
  * CanvasWrapper
  *
  * Lazy-loads a 3D scene chunk and mounts the R3F <Canvas> only when the
  * wrapper is near the viewport. Falls back to a static generative image on
- * low-GPU devices or when the user prefers reduced motion.
+ * low-GPU devices or when the user prefers reduced motion. Any error thrown
+ * by the scene is contained by SceneErrorBoundary and shows the fallback.
+ *
+ * `sceneProps` are forwarded to the scene component rendered inside the
+ * Canvas. `fallback` optionally overrides the default static image.
  */
 export default function CanvasWrapper({
   scene,
+  sceneProps = {},
   className = '',
   style,
   canvasProps = {},
+  fallback,
   fallbackAlt = '3D scene placeholder',
 }) {
   const gpuTier = useGPU()
@@ -64,7 +71,9 @@ export default function CanvasWrapper({
   // Cap pixel ratio by GPU tier to keep the scene lightweight on mid devices.
   const dpr = gpuTier === 'high' ? [1, 2] : gpuTier === 'mid' ? [1, 1.5] : [1, 1]
 
-  const show3D = canRender3D && shouldMount && !loadError
+  const show3D = canRender3D && shouldMount && !loadError && Boolean(LazyScene)
+
+  const fallbackNode = fallback ?? <FallbackImage alt={fallbackAlt} />
 
   return (
     <div
@@ -82,27 +91,29 @@ export default function CanvasWrapper({
       aria-label={show3D ? 'Interactive 3D scene' : fallbackAlt}
     >
       <style>{`.canvas-wrapper:focus-visible { outline: 3px solid #9C5636; outline-offset: 4px; }`}</style>
-      {!show3D && <FallbackImage alt={fallbackAlt} />}
+      {!show3D && fallbackNode}
       {show3D && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            opacity: inView ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-          }}
-        >
-          <Canvas
-            dpr={dpr}
-            frameloop="always"
-            style={{ width: '100%', height: '100%' }}
-            {...canvasProps}
+        <SceneErrorBoundary fallback={fallbackNode}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              opacity: inView ? 1 : 0,
+              transition: 'opacity 0.3s ease',
+            }}
           >
-            <Suspense fallback={null}>
-              <LazyScene />
-            </Suspense>
-          </Canvas>
-        </div>
+            <Canvas
+              dpr={dpr}
+              frameloop="always"
+              style={{ width: '100%', height: '100%' }}
+              {...canvasProps}
+            >
+              <Suspense fallback={null}>
+                <LazyScene {...sceneProps} />
+              </Suspense>
+            </Canvas>
+          </div>
+        </SceneErrorBoundary>
       )}
     </div>
   )
