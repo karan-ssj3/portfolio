@@ -15,7 +15,8 @@ import SceneErrorBoundary from './SceneErrorBoundary'
  * by the scene is contained by SceneErrorBoundary and shows the fallback.
  *
  * `sceneProps` are forwarded to the scene component rendered inside the
- * Canvas. `fallback` optionally overrides the default static image.
+ * Canvas, merged with `inView` so scenes may early-return while off-screen.
+ * `fallback` optionally overrides the default static image.
  */
 export default function CanvasWrapper({
   scene,
@@ -90,7 +91,7 @@ export default function CanvasWrapper({
       tabIndex={0}
       aria-label={show3D ? 'Interactive 3D scene' : fallbackAlt}
     >
-      <style>{`.canvas-wrapper:focus-visible { outline: 3px solid #9C5636; outline-offset: 4px; }`}</style>
+      <style>{`.canvas-wrapper:focus-visible { outline: 3px solid #F0D7FF; outline-offset: 4px; }`}</style>
       {!show3D && fallbackNode}
       {show3D && (
         <SceneErrorBoundary fallback={fallbackNode}>
@@ -109,7 +110,7 @@ export default function CanvasWrapper({
               {...canvasProps}
             >
               <Suspense fallback={null}>
-                <LazyScene {...sceneProps} />
+                <LazyScene {...sceneProps} inView={inView} />
               </Suspense>
             </Canvas>
           </div>

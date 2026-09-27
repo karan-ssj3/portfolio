@@ -40,6 +40,15 @@ export default function ScrollProvider({ children }) {
       }, 150)
     }
 
+    // Immediate refresh for the window load and fonts-ready milestones,
+    // followed by a debounced pass to catch anything still settling.
+    const refreshNow = () => {
+      if (cancelled) return
+      ScrollTrigger.refresh()
+      lenisRef.current?.resize()
+      scheduleRefresh()
+    }
+
     const destroyLenis = () => {
       if (!lenisRef.current) return
       gsap.ticker.remove(rafRef.current)
@@ -51,6 +60,8 @@ export default function ScrollProvider({ children }) {
 
     const createLenis = () => {
       if (lenisRef.current) return
+      // Never smooth scroll under reduced motion.
+      if (prefersReduced.matches) return
       const lenis = new Lenis({
         lerp: 0.1,
         smoothWheel: true,
@@ -103,14 +114,17 @@ export default function ScrollProvider({ children }) {
       : null
     ro?.observe(document.body)
 
-    window.addEventListener('load', scheduleRefresh)
-    document.fonts?.ready?.then(scheduleRefresh).catch(() => {})
+    // If the load event already fired before mount, refresh right away.
+    if (document.readyState === 'complete') refreshNow()
+    else window.addEventListener('load', refreshNow)
+
+    document.fonts?.ready?.then(refreshNow).catch(() => {})
 
     return () => {
       cancelled = true
       clearTimeout(refreshTimer)
       ro?.disconnect()
-      window.removeEventListener('load', scheduleRefresh)
+      window.removeEventListener('load', refreshNow)
       prefersReduced.removeEventListener('change', onMediaChange)
       destroyLenis()
     }
