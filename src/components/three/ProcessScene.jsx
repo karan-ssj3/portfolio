@@ -1,9 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { useScrollContext } from '../../providers/ScrollProvider'
-import useGPU from '../../hooks/useGPU'
-import useReducedMotion from '../../hooks/useReducedMotion'
-import FallbackImage from './FallbackImage'
+import { useMemo, useRef } from 'react'
+import { useFrame } from '@react-three/fiber'
+import CanvasWrapper from './CanvasWrapper'
 
 const INK = '#1C1B18'
 const ACCENT = '#9C5636'
@@ -185,7 +182,7 @@ function FloatingParticles({ count = 120 }) {
   )
 }
 
-function Scene({ index }) {
+function ProcessStepScene({ index }) {
   const groupRef = useRef()
 
   useFrame((_, delta) => {
@@ -208,78 +205,21 @@ function Scene({ index }) {
 /**
  * ProcessScene
  *
- * Generative typographic point-cloud scene for each 'How I work' phase.
- * Follows the CanvasWrapper pattern: mounts only when near the viewport,
- * caps dpr by GPU tier, and pauses the frameloop when off-screen. Falls back
- * to a static generative image on low-GPU devices or under reduced motion.
+ * Thin wrapper that mounts a per-step ProcessStepScene through the shared
+ * CanvasWrapper. The wrapper handles lazy loading, viewport intersection,
+ * GPU tier fallback, and reduced-motion fallback to a static image.
  */
 export default function ProcessScene({ index }) {
-  const { reducedMotion: contextReducedMotion } = useScrollContext()
-  const gpuTier = useGPU()
-  const hookReducedMotion = useReducedMotion()
-  const wrapperRef = useRef(null)
-
-  const [inView, setInView] = useState(false)
-  const [shouldMount, setShouldMount] = useState(false)
-
-  const reducedMotion = contextReducedMotion || hookReducedMotion
-  const isLowGPU = gpuTier === 'low'
-  const canRender3D = !reducedMotion && !isLowGPU
-
-  useEffect(() => {
-    if (!canRender3D) return
-
-    const element = wrapperRef.current
-    if (!element) return
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setInView(true)
-          setShouldMount(true)
-        } else {
-          setInView(false)
-        }
-      },
-      { rootMargin: '200px', threshold: 0 },
-    )
-
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [canRender3D])
-
-  // Cap pixel ratio by GPU tier to keep the scene lightweight on mid devices.
-  const dpr = gpuTier === 'high' ? [1, 2] : gpuTier === 'mid' ? [1, 1.5] : [1, 1]
-
-  const show3D = canRender3D && shouldMount
+  const scene = useMemo(
+    () => () => Promise.resolve({ default: () => <ProcessStepScene index={index} /> }),
+    [index],
+  )
 
   return (
-    <div
-      ref={wrapperRef}
-      aria-hidden="true"
-      style={{ position: 'absolute', inset: 0 }}
-    >
-      {!show3D && <FallbackImage alt={`Process step ${index + 1}`} />}
-      {show3D && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            opacity: inView ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-          }}
-        >
-          <Canvas
-            camera={{ position: [0, 0, 5], fov: 45 }}
-            dpr={dpr}
-            frameloop={inView ? 'always' : 'never'}
-            gl={{ alpha: true }}
-            style={{ width: '100%', height: '100%' }}
-          >
-            <Scene index={index} />
-          </Canvas>
-        </div>
-      )}
-    </div>
+    <CanvasWrapper
+      scene={scene}
+      canvasProps={{ camera: { position: [0, 0, 5], fov: 45 }, gl: { alpha: true } }}
+      fallbackAlt={`Process step ${index + 1}`}
+    />
   )
 }

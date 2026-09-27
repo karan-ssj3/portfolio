@@ -1,6 +1,7 @@
 import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import CanvasWrapper from './CanvasWrapper'
 
 const POINT_COUNT = 80
 const CONNECTION_COUNT = 120
@@ -18,17 +19,10 @@ function mulberry32(seed) {
   }
 }
 
-/**
- * GlobeScene
- *
- * Abstract dark-ink network geometry designed for the light background:
- * a single THREE.Points cloud for the nodes and one merged lineSegments
- * geometry for the connections, plus a slow rotation.
- */
-export default function GlobeScene() {
+function InnerGlobeScene() {
   const groupRef = useRef()
 
-  const { nodeGeometry, nodeColors, lineGeometry } = useMemo(() => {
+  const { nodeGeometry, lineGeometry } = useMemo(() => {
     const rand = mulberry32(20260927)
 
     const positions = new Float32Array(POINT_COUNT * 3)
@@ -73,7 +67,7 @@ export default function GlobeScene() {
     }
     const lineGeo = new THREE.BufferGeometry().setFromPoints(segmentPoints)
 
-    return { nodeGeometry: nodeGeo, nodeColors: colors, lineGeometry: lineGeo }
+    return { nodeGeometry: nodeGeo, lineGeometry: lineGeo }
   }, [])
 
   useFrame((_, delta) => {
@@ -97,5 +91,16 @@ export default function GlobeScene() {
         />
       </points>
     </group>
+  )
+}
+
+export default function GlobeScene() {
+  const scene = useMemo(() => () => Promise.resolve({ default: InnerGlobeScene }), [])
+  return (
+    <CanvasWrapper
+      scene={scene}
+      canvasProps={{ camera: { position: [0, 0, 2.5], fov: 45 }, gl: { alpha: true } }}
+      fallbackAlt="3D globe network"
+    />
   )
 }
