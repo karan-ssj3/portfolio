@@ -115,11 +115,8 @@ export default function ExperienceTimeline({ compact = false, showHeader = true 
                     <p className="experience__meta">
                       <span>{role.company}</span>
                       {showLocation && <span>{role.location}</span>}
-                      <span className="tnum">
-                        {role.startDate}
-                        <span aria-hidden="true"> – </span>
-                        <span className="sr-only"> to </span>
-                        {role.endDate}
+                      <span className="tnum xp-dates">
+                        {`${role.startDate} to ${role.endDate}`}
                       </span>
                       {role.current && <span className="experience__badge">Current</span>}
                     </p>

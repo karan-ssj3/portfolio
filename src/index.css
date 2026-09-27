@@ -6,7 +6,7 @@
 @tailwind utilities;
 
 /* ============================================================
-   DESIGN TOKENS — Wispr-derived palette
+   DESIGN TOKENS: Wispr-derived palette
    ============================================================ */
 :root {
   --lumen: #FFFFEB;
@@ -129,7 +129,7 @@ button {
 }
 
 /* ============================================================
-   LENIS — smooth scroll owns the window; native smooth scrolling
+   LENIS - smooth scroll owns the window; native smooth scrolling
    must be off or every Lenis frame becomes an interrupted animation
    ============================================================ */
 html.lenis,
@@ -150,7 +150,7 @@ html.lenis body {
 }
 
 /* ============================================================
-   FOCUS — teal on cream, lilac on dark slabs
+   FOCUS - teal on cream, lilac on dark slabs
    ============================================================ */
 :focus-visible {
   outline: 3px solid var(--fathom);
