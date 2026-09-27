@@ -2,6 +2,7 @@ import { createRef, useEffect, useMemo, useRef, useState } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Section from '../components/Section'
+import LossCurveHUD from '../components/LossCurveHUD'
 import CanvasWrapper from '../components/three/CanvasWrapper'
 import DeepLayersFallback from '../components/three/DeepLayersFallback'
 import useReducedMotion from '../hooks/useReducedMotion'
@@ -108,9 +109,13 @@ const STYLES = `
   max-width: 820px;
   margin: 40px auto 0;
 }
+/* Keep the caption clear of the loss-curve HUD at bottom-left. */
+@media (max-width: 1599px) {
+  .deep-layers__stage .deep-layers__caption { bottom: 236px; }
+}
 @media (max-width: 719px) {
   .deep-layers__label { font-size: 12px; padding: 5px 10px; }
-  .deep-layers__caption { bottom: 32px; }
+  .deep-layers__stage .deep-layers__caption { bottom: 176px; }
 }
 `
 
@@ -293,6 +298,8 @@ export default function DeepLayers() {
               </span>
             ))}
           </div>
+
+          <LossCurveHUD />
 
           <p ref={captionRef} className="display d-32 deep-layers__caption">
             {CAPTION}
