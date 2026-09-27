@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
 import { PROJECTS } from '../data/projects'
 
 const ACCENT = '#9C5636'
@@ -147,8 +145,6 @@ export default function Projects() {
 
   return (
     <>
-      <Navbar />
-
       <main className="page-main">
         <header className="page-hero">
           <p className="page-label">// Portfolio</p>
@@ -181,8 +177,6 @@ export default function Projects() {
           ))}
         </section>
       </main>
-
-      <Footer />
     </>
   )
 }

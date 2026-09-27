@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
 
 const ACCENT = '#9C5636'
 const ACCENT_SOFT = 'rgba(156, 86, 54, 0.10)'
@@ -55,8 +53,6 @@ export default function Contact() {
 
   return (
     <>
-      <Navbar />
-
       <main className="page-main">
         <header className="page-hero">
           <p className="page-label">// Connect</p>
@@ -196,8 +192,6 @@ export default function Contact() {
           </div>
         </section>
       </main>
-
-      <Footer />
     </>
   )
 }

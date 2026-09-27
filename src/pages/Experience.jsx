@@ -1,6 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import Navbar from '../components/Navbar'
-import Footer from '../components/Footer'
 import { EXPERIENCE } from '../data/experience'
 
 const ACCENT = '#9C5636'
@@ -82,8 +80,6 @@ function TimelineCard({ exp, index, isLast }) {
 export default function Experience() {
   return (
     <>
-      <Navbar />
-
       <main className="page-main">
         <header className="page-hero">
           <p className="page-label">// Career Journey</p>
@@ -104,8 +100,6 @@ export default function Experience() {
           </ol>
         </section>
       </main>
-
-      <Footer />
     </>
   )
 }
