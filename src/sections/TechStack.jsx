@@ -1,21 +1,46 @@
 import Section from '../components/Section'
 import TechTicker from '../components/TechTicker'
 
+// Tool names come from content-draft only. Do not add others here.
+const ROW_ONE = [
+  'Airflow',
+  'dbt Cloud',
+  'Kubeflow',
+  'Databricks',
+  'Delta Lake',
+  'AWS',
+  'GCP',
+  'Azure',
+  'SQL',
+  'Pandas',
+  'Tableau',
+  'Power BI',
+]
+
+const ROW_TWO = [
+  'FAISS',
+  'LangGraph',
+  'LangSmith',
+  'GPT-4o',
+  'PyTorch',
+  'TensorFlow',
+  'Scikit-learn',
+  'Pydantic',
+  'Streamlit',
+  'React',
+  'Prophet',
+  'LSTM/GRU',
+]
+
 export default function TechStack() {
   return (
-    <Section id="tech-stack" className="py-24 px-6 md:px-12 lg:px-20 bg-[#F5F3EE]">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12 md:gap-16 items-start">
-          <div>
-            <h2 className="font-['Space_Grotesk'] text-4xl md:text-5xl font-medium text-[#1C1B18] mb-4">
-              Tech stack
-            </h2>
-            <p className="font-['Inter'] text-lg text-[#1C1B18]/70 max-w-md">
-              Tools and frameworks that show up across shipped work.
-            </p>
-          </div>
-          <TechTicker />
-        </div>
+    <Section id="tech-stack" tone="ink" roundedBottom style={{ padding: '72px 0 96px' }}>
+      <p className="eyebrow" style={{ textAlign: 'center', color: '#FFFFEB', margin: '0 0 32px' }}>
+        BUILT WITH
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <TechTicker items={ROW_ONE} label="Data and platform tools" />
+        <TechTicker items={ROW_TWO} reverse label="AI and application tools" />
       </div>
     </Section>
   )
