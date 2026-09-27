@@ -14,8 +14,8 @@ const PROJECTS_PATH = '/projects'
 /**
  * Hero
  *
- * Cream slab carrying the approved FULL STACK / DATA SCIENCE headline
- * (markup unchanged, recoloured to ink), the lede with a word reveal, the
+ * Cream slab carrying the ALL-ROUNDER / AI ENGINEER headline (same uppercase
+ * display treatment as before, ink on cream), the lede with a word reveal, the
  * two CTAs and the curved pipeline-log status chips. No 3D, particles or
  * grain. Bottom padding leaves room for the Deep Layers ink slab overlap.
  */
@@ -57,13 +57,18 @@ export default function Hero() {
           margin: 0;
           color: ${INK};
         }
+        /* Each line stays whole: never break ALL-ROUNDER at its hyphen. */
+        .hero-heading-line {
+          display: block;
+          white-space: nowrap;
+        }
         .hero-lede {
           margin: 0;
           color: ${INK};
           font-family: 'Figtree', system-ui, sans-serif;
         }
         @media (max-width: 480px) {
-          .hero-heading { font-size: clamp(2.5rem, 12vw, 3.5rem) !important; }
+          .hero-heading { font-size: clamp(2.25rem, 10.5vw, 3.5rem) !important; }
         }
       `}</style>
 
@@ -85,13 +90,12 @@ export default function Hero() {
           id="hero-heading"
           className="hero-heading"
           style={{
-            fontSize: 'clamp(3rem, 9vw, 6.5rem)',
-            maxWidth: '18ch',
+            fontSize: 'clamp(3rem, 8.5vw, 6.5rem)',
+            maxWidth: '100%',
           }}
         >
-          FULL STACK
-          <br />
-          DATA SCIENCE
+          <span className="hero-heading-line">ALL-ROUNDER</span>
+          <span className="hero-heading-line">AI ENGINEER</span>
         </h1>
 
         <p className="lede hero-lede reveal" style={{ marginTop: '1.5rem', maxWidth: '44ch' }}>
