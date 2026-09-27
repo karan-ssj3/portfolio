@@ -21,6 +21,19 @@ const LAST_LAYER = 5
 const POINTER_RADIUS = 1.2
 const NEURON_BAND = 0.08
 
+// Camera choreography: frontal and wide, oblique dolly into the sheets,
+// alongside them, elevated three-quarter view, then a pull back.
+const CAMERA_PATH = [
+  [0, 1.2, 12],
+  [3.5, 1.8, 6],
+  [4.5, 0.8, 0],
+  [3, 4, -2],
+  [0, 3, 11],
+]
+const CAMERA_LAMBDA = 4
+const LABEL_MARGIN = 8
+const LABEL_LIFT = 18
+
 function roundedRectShape(width, height, radius) {
   const x = -width / 2
   const y = -height / 2
@@ -46,6 +59,18 @@ function clamp01(value) {
   return Math.min(1, Math.max(0, value))
 }
 
+// When a label is wider than the usable span (very narrow stages), centre it
+// rather than letting it slide off one edge.
+function clampRange(value, min, max) {
+  if (min > max) return (min + max) / 2
+  return Math.min(max, Math.max(min, value))
+}
+
+// Scroll progress to curve parameter: clamped onto the curve's 0..1 range.
+function remap(progress) {
+  return clamp01(progress)
+}
+
 // Matches the shader: a sweep parked at 0 or 1 is idle.
 function sweepGate(head) {
   return head > 0.0001 && head < 0.9999 ? 1 : 0
@@ -56,10 +81,9 @@ function sweepGate(head) {
  *
  * Deep Layers centrepiece: translucent sheets, neuron discs, propagation
  * edges and forward pulses. Four draw calls in total (Bloom adds its own
- * passes on the high tier only). Camera choreography and labels arrive in
- * V06 (labelsRef is accepted now so the prop contract stays stable).
+ * passes on the high tier only). The camera follows a scroll-driven path and
+ * the six output positions are projected onto DOM labels every 3rd frame.
  */
-// eslint-disable-next-line no-unused-vars
 export default function DeepLayersScene({ mobile = false, highTier = false, labelsRef }) {
   const topology = useMemo(() => buildTopology({ mobile }), [mobile])
   const layerCount = topology.layers.length
@@ -131,6 +155,16 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
     [uniforms],
   )
 
+  const cameraCurve = useMemo(
+    () =>
+      new THREE.CatmullRomCurve3(
+        CAMERA_PATH.map(([x, y, z]) => new THREE.Vector3(x, y, z)),
+        false,
+        'centripetal',
+      ),
+    [],
+  )
+
   // Scratch objects for per-frame work, allocated once.
   const scratch = useMemo(
     () => ({
@@ -142,20 +176,27 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
       plane: new THREE.Plane(new THREE.Vector3(0, 0, 1), 0),
       hit: new THREE.Vector3(),
       layerGlow: new Float32Array(8),
+      camTarget: new THREE.Vector3(),
+      lookFrom: new THREE.Vector3(),
+      lookTo: new THREE.Vector3(),
+      look: new THREE.Vector3(0, 0, 0),
+      proj: new THREE.Vector3(),
+      view: new THREE.Vector3(),
     }),
     [],
   )
 
-  // Transparent background so the ink slab shows through; static camera.
+  // Transparent background so the ink slab shows through; initial camera pose.
   useLayoutEffect(() => {
     scene.background = null
-    camera.position.set(0, 1.2, 12)
+    camera.position.set(...CAMERA_PATH[0])
     if (camera.isPerspectiveCamera) {
       camera.fov = mobile ? 55 : 45
       camera.updateProjectionMatrix()
     }
-    camera.lookAt(0, 0, 0)
-  }, [camera, scene, mobile])
+    scratch.look.set(0, 0, 0)
+    camera.lookAt(scratch.look)
+  }, [camera, scene, mobile, scratch])
 
   // Instance matrices for sheets and neurons, plus initial neuron colours.
   useLayoutEffect(() => {
@@ -185,7 +226,10 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
       neuronMaterial.needsUpdate = true
     }
 
+    // Layers are centred on the z axis, so their centres are (0, 0, z).
     scratch.plane.constant = -topology.layerZ[0]
+    scratch.lookFrom.set(0, 0, topology.layerZ[0])
+    scratch.lookTo.set(0, 0, topology.layerZ[layerCount - 1])
   }, [topology, layerCount, scratch, neuronMaterial])
 
   useFrame((state, rawDelta) => {
@@ -193,6 +237,17 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
 
     const delta = Math.min(rawDelta, 0.1)
     const u = uniforms
+    const cam = state.camera
+
+    // Camera path: position damps to the curve, lookAt lerps L0 to L5.
+    const t = remap(store.progress)
+    cameraCurve.getPoint(t, scratch.camTarget)
+    cam.position.x = THREE.MathUtils.damp(cam.position.x, scratch.camTarget.x, CAMERA_LAMBDA, delta)
+    cam.position.y = THREE.MathUtils.damp(cam.position.y, scratch.camTarget.y, CAMERA_LAMBDA, delta)
+    cam.position.z = THREE.MathUtils.damp(cam.position.z, scratch.camTarget.z, CAMERA_LAMBDA, delta)
+    scratch.look.lerpVectors(scratch.lookFrom, scratch.lookTo, t)
+    cam.lookAt(scratch.look)
+    cam.updateMatrixWorld()
 
     u.uTime.value += delta
     u.uDpr.value = state.gl.getPixelRatio()
@@ -212,7 +267,7 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
     let pointerHit = false
     if (store.pointer.active) {
       scratch.ndc.set(store.pointer.x, store.pointer.y)
-      scratch.raycaster.setFromCamera(scratch.ndc, state.camera)
+      scratch.raycaster.setFromCamera(scratch.ndc, cam)
       if (scratch.raycaster.ray.intersectPlane(scratch.plane, scratch.hit)) {
         pointerHit = true
         u.uPointer.value.set(scratch.hit.x, scratch.hit.y)
@@ -225,8 +280,40 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
       delta,
     )
 
-    // Neuron brightness every 2nd frame: cream to amber by forward-band proximity.
     frameRef.current += 1
+
+    // Role labels every 3rd frame: project outputs to screen, clamp inside the stage.
+    if (frameRef.current % 3 === 0 && Array.isArray(labelsRef)) {
+      const { width, height } = state.size
+      const outputs = topology.outputPositions
+      for (let k = 0; k < outputs.length; k += 1) {
+        const el = labelsRef[k]?.current
+        if (!el) continue
+        const o = outputs[k]
+        scratch.view.set(o.x, o.y, o.z).applyMatrix4(cam.matrixWorldInverse)
+        if (scratch.view.z > -cam.near) {
+          el.style.visibility = 'hidden'
+          continue
+        }
+        scratch.proj.set(o.x, o.y, o.z).project(cam)
+        const w = el.offsetWidth
+        const h = el.offsetHeight
+        const cx = clampRange(
+          (scratch.proj.x * 0.5 + 0.5) * width,
+          w / 2 + LABEL_MARGIN,
+          width - w / 2 - LABEL_MARGIN,
+        )
+        const cy = clampRange(
+          (-scratch.proj.y * 0.5 + 0.5) * height - LABEL_LIFT,
+          h / 2 + LABEL_MARGIN,
+          height - h / 2 - LABEL_MARGIN,
+        )
+        el.style.transform = `translate3d(${(cx - w / 2).toFixed(1)}px, ${(cy - h / 2).toFixed(1)}px, 0)`
+        el.style.visibility = 'visible'
+      }
+    }
+
+    // Neuron brightness every 2nd frame: cream to amber by forward-band proximity.
     if (frameRef.current % 2 !== 0) return
     const neurons = neuronsRef.current
     if (!neurons || !neurons.instanceColor) return

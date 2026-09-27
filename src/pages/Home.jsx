@@ -1,4 +1,5 @@
 import Hero from '../sections/Hero'
+import DeepLayers from '../sections/DeepLayers'
 import HowIWork from '../sections/HowIWork'
 import ProjectSpace from '../sections/ProjectSpace'
 import TechStack from '../sections/TechStack'
@@ -12,6 +13,7 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <DeepLayers />
       <HowIWork />
       <ProjectSpace />
       <TechStack />
