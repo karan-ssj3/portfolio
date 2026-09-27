@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import ScrollProvider from './providers/ScrollProvider'
+import SkipLink from './components/SkipLink'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import ChatWidget from './components/ChatWidget'
@@ -9,6 +10,7 @@ import Projects from './pages/Projects'
 import Experience from './pages/Experience'
 import Blog from './pages/Blog'
 import Contact from './pages/Contact'
+import './styles/layout.css'
 
 function ScrollToTop() {
   const { pathname } = useLocation()
@@ -22,8 +24,9 @@ export default function App() {
       <ScrollProvider>
         <ScrollToTop />
         <div className="app">
+          <SkipLink />
           <Navbar />
-          <main>
+          <main id="main" tabIndex={-1}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/projects" element={<Projects />} />

@@ -1,16 +1,24 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 
-const LINKS = [
-  { to: '/',           label: 'Home' },
-  { to: '/projects',   label: 'Projects' },
+const ROUTE_LINKS = [
+  { to: '/', label: 'Home' },
+  { to: '/projects', label: 'Projects' },
   { to: '/experience', label: 'Experience' },
-  { to: '/blog',       label: 'Blog' },
-  { to: '/contact',    label: 'Contact' },
+  { to: '/blog', label: 'Blog' },
+]
+
+const HOME_ANCHORS = [
+  { to: '#hero', label: 'Home' },
+  { to: '#projects', label: 'Projects' },
+  { to: '#experience', label: 'Experience' },
+  { to: '#blog', label: 'Blog' },
 ]
 
 export default function Navbar() {
-  const [scrolled,   setScrolled]   = useState(false)
+  const { pathname } = useLocation()
+  const isHome = pathname === '/'
+  const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
@@ -19,32 +27,70 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') setMobileOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  const links = isHome ? HOME_ANCHORS : ROUTE_LINKS
+
+  const handleAnchorClick = (e, href) => {
+    e.preventDefault()
+    const el = document.querySelector(href)
+    if (el) {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      el.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' })
+      window.history.pushState(null, '', href)
+    }
+    setMobileOpen(false)
+  }
+
   return (
-    <nav className={`nav${scrolled ? ' nav-scrolled' : ''}`}>
+    <nav className={`nav${scrolled ? ' nav-scrolled' : ''}`} aria-label="Primary">
       <NavLink to="/" className="nav-logo" onClick={() => setMobileOpen(false)}>
-        <span className="nav-logo-mark">KB</span>
-        <span className="nav-logo-divider" />
-        <span className="nav-logo-name">Karan Bhutani</span>
+        <span className="nav-logo-mark" aria-label="Karan Bhutani">
+          KB
+          <span className="nav-logo-dot" aria-hidden="true" />
+        </span>
       </NavLink>
 
       <ul className="nav-links">
-        {LINKS.map(({ to, label }) => (
+        {links.map(({ to, label }) => (
           <li key={to}>
-            <NavLink
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
-            >
-              {label}
-            </NavLink>
+            {to.startsWith('#') ? (
+              <a
+                href={to}
+                className="nav-link"
+                onClick={(e) => handleAnchorClick(e, to)}
+              >
+                {label}
+              </a>
+            ) : (
+              <NavLink
+                to={to}
+                end={to === '/'}
+                className={({ isActive }) => `nav-link${isActive ? ' nav-link-active' : ''}`}
+              >
+                {label}
+              </NavLink>
+            )}
           </li>
         ))}
       </ul>
+
+      <NavLink to="/contact" className="nav-cta">
+        Let's talk
+      </NavLink>
 
       <button
         className="nav-hamburger"
         onClick={() => setMobileOpen(o => !o)}
         aria-label="Menu"
+        aria-expanded={mobileOpen}
+        aria-controls="mobile-menu"
       >
         <span style={{ transform: mobileOpen ? 'rotate(45deg) translate(4px,4px)' : 'none' }} />
         <span style={{ opacity: mobileOpen ? 0 : 1 }} />
@@ -52,18 +98,34 @@ export default function Navbar() {
       </button>
 
       {mobileOpen && (
-        <div className="nav-mobile-menu">
-          {LINKS.map(({ to, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) => `nav-mobile-link${isActive ? ' nav-link-active' : ''}`}
-              onClick={() => setMobileOpen(false)}
-            >
-              {label}
-            </NavLink>
-          ))}
+        <div id="mobile-menu" className="nav-mobile-menu">
+          <ul className="nav-mobile-list">
+            {links.map(({ to, label }) => (
+              <li key={to}>
+                {to.startsWith('#') ? (
+                  <a
+                    href={to}
+                    className="nav-mobile-link"
+                    onClick={(e) => handleAnchorClick(e, to)}
+                  >
+                    {label}
+                  </a>
+                ) : (
+                  <NavLink
+                    to={to}
+                    end={to === '/'}
+                    className={({ isActive }) => `nav-mobile-link${isActive ? ' nav-link-active' : ''}`}
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    {label}
+                  </NavLink>
+                )}
+              </li>
+            ))}
+          </ul>
+          <NavLink to="/contact" className="nav-mobile-cta" onClick={() => setMobileOpen(false)}>
+            Let's talk
+          </NavLink>
         </div>
       )}
     </nav>
