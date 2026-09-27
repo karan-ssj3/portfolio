@@ -1,187 +1,142 @@
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { posts } from 'virtual:rss-posts'
+import Section from '../components/Section'
+import PillButton from '../components/PillButton'
 
-const ACCENT = {
-  color: '#9C5636',
-  light: 'rgba(156, 86, 54, 0.08)',
-  border: 'rgba(156, 86, 54, 0.25)',
+const MEDIUM_URL = 'https://medium.com/@karanbhutani477'
+const STYLE_ID = 'blog-page-styles'
+
+const CSS = `
+.blog-header{padding:160px 0 64px}
+.blog-header .display{margin:0}
+.blog-body{padding:0 0 120px}
+.blog-list{list-style:none;margin:0;padding:0;border-top:1px solid rgba(26,26,26,.1)}
+.blog-row{position:relative;border-bottom:1px solid rgba(26,26,26,.1)}
+.blog-row::before{content:'';position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:3px;background:#FF6C4C;opacity:0;transition:opacity 180ms var(--ease-out)}
+.blog-row:hover::before,.blog-row:focus-within::before{opacity:1}
+.blog-row-link{display:flex;flex-direction:column;gap:8px;padding:28px 0 28px 24px;color:inherit;text-decoration:none}
+.blog-row-title{margin:0;font-family:'EB Garamond',Georgia,serif;font-weight:400;font-size:32px;line-height:1.1;letter-spacing:-0.02em;overflow-wrap:anywhere}
+.blog-row-date{font-family:'Figtree',system-ui,sans-serif;font-size:14px;color:rgba(26,26,26,.6)}
+.blog-skeleton{display:flex;flex-direction:column;gap:12px;padding:28px 0 28px 24px;border-bottom:1px solid rgba(26,26,26,.1)}
+.blog-skeleton-bar{display:block;border-radius:8px;background:#E4E4D0;animation:blog-pulse 1.4s var(--ease-inout) infinite alternate}
+.blog-skeleton-bar--title{height:32px;width:min(560px,80%)}
+.blog-skeleton-bar--date{height:14px;width:120px}
+@keyframes blog-pulse{from{opacity:1}to{opacity:.55}}
+@media (prefers-reduced-motion: reduce){.blog-skeleton-bar{animation:none}.blog-row::before{transition:none}}
+.blog-empty{display:flex;flex-direction:column;align-items:flex-start;gap:20px;padding:40px 0}
+.blog-empty p{margin:0;font-size:20px;line-height:26px;font-weight:500}
+@media (max-width:640px){.blog-header{padding-bottom:40px}.blog-row-title{font-size:26px}.blog-row-link,.blog-skeleton{padding-left:18px}}
+`
+
+function injectStyles() {
+  if (typeof document === 'undefined' || document.getElementById(STYLE_ID)) return
+  const el = document.createElement('style')
+  el.id = STYLE_ID
+  el.textContent = CSS
+  document.head.appendChild(el)
 }
 
-function useVisible(threshold = 0.1) {
-  const ref = useRef(null)
-  const [visible, setVisible] = useState(false)
-  const [reducedMotion, setReducedMotion] = useState(false)
+const isThenable = (value) => Boolean(value) && typeof value.then === 'function'
 
-  useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    setReducedMotion(mq.matches)
-    if (mq.matches) {
-      setVisible(true)
-      return
-    }
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setVisible(true)
-          obs.disconnect()
-        }
-      },
-      { threshold }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [threshold])
-
-  return [ref, visible, reducedMotion]
+// Posts are resolved at build time, but guard against a promise or a
+// missing list so the page always lands in a known state.
+function toState(value) {
+  if (Array.isArray(value) && value.length > 0) return { status: 'ready', items: value }
+  return { status: 'error', items: [] }
 }
 
-function FeaturedCard({ post }) {
-  const [ref, visible, reducedMotion] = useVisible()
+function initialState() {
+  if (isThenable(posts)) return { status: 'loading', items: [] }
+  return toState(posts)
+}
 
+function SkeletonRows() {
   return (
-    <article
-      ref={ref}
-      className={`blog-featured${visible ? ' blog-visible' : ''}${reducedMotion ? ' blog-reduced-motion' : ''}`}
-      aria-labelledby={`post-${post.id}-title`}
-    >
-      <a
-        href={post.link}
-        target="_blank"
-        rel="noreferrer"
-        className="blog-featured-link"
-        aria-label={`Read "${post.title}" on Medium`}
-      >
-        <div className="blog-featured-thumb" style={{ background: post.gradient }} aria-hidden="true">
-          <div className="blog-featured-overlay" />
-          <div className="blog-featured-badge">Latest Post</div>
+    <div role="status" aria-live="polite">
+      <span className="sr-only">Loading posts</span>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="blog-skeleton" aria-hidden="true">
+          <span className="blog-skeleton-bar blog-skeleton-bar--title" />
+          <span className="blog-skeleton-bar blog-skeleton-bar--date" />
         </div>
-        <div className="blog-featured-body">
-          <div className="blog-meta">
-            <time className="blog-date" dateTime={post.isoDate}>{post.date}</time>
-            <span className="blog-dot-sep" aria-hidden="true" />
-            <span className="blog-read-time">{post.readTime}</span>
-          </div>
-          <h2 id={`post-${post.id}-title`} className="blog-featured-title">{post.title}</h2>
-          <p className="blog-featured-excerpt">{post.excerpt}</p>
-          {post.categories?.length > 0 && (
-            <ul className="blog-categories" aria-label="Categories">
-              {post.categories.map(cat => (
-                <li
-                  key={cat}
-                  className="blog-cat"
-                  style={{
-                    color: ACCENT.color,
-                    background: ACCENT.light,
-                    borderColor: ACCENT.border,
-                  }}
-                >
-                  {cat}
-                </li>
-              ))}
-            </ul>
-          )}
-          <span className="blog-read-link" style={{ color: ACCENT.color }}>
-            Read on Medium <span className="blog-arrow" aria-hidden="true">→</span>
-          </span>
-        </div>
-      </a>
-    </article>
+      ))}
+    </div>
   )
 }
 
-function BlogCard({ post, index }) {
-  const [ref, visible, reducedMotion] = useVisible()
-
+function EmptyState() {
   return (
-    <article
-      ref={ref}
-      className={`blog-card${visible ? ' blog-visible' : ''}${reducedMotion ? ' blog-reduced-motion' : ''}`}
-      style={{ animationDelay: reducedMotion ? '0ms' : `${index * 80}ms` }}
-      aria-labelledby={`post-${post.id}-title`}
-    >
+    <div className="blog-empty">
+      <p>Posts are on Medium.</p>
+      <PillButton href={MEDIUM_URL} variant="outline">
+        Read on Medium
+      </PillButton>
+    </div>
+  )
+}
+
+function PostRow({ post }) {
+  return (
+    <li className="blog-row">
       <a
         href={post.link}
         target="_blank"
-        rel="noreferrer"
-        className="blog-card-link"
-        aria-label={`Read "${post.title}" on Medium`}
+        rel="noopener noreferrer"
+        className="blog-row-link"
       >
-        <div className="blog-card-thumb" style={{ background: post.gradient }} aria-hidden="true">
-          <svg viewBox="0 0 200 120" className="blog-card-thumb-pattern" aria-hidden="true">
-            <circle cx="160" cy="60" r="40" fill="none" stroke="#F5F3EE" strokeWidth=".8" />
-            <circle cx="160" cy="60" r="20" fill="none" stroke="#F5F3EE" strokeWidth=".5" />
-            <line x1="40" y1="90" x2="160" y2="60" stroke="#F5F3EE" strokeWidth=".3" strokeDasharray="4 4" />
-          </svg>
-        </div>
-        <div className="blog-card-body">
-          <div className="blog-meta">
-            <time className="blog-date" dateTime={post.isoDate}>{post.date}</time>
-            <span className="blog-dot-sep" aria-hidden="true" />
-            <span className="blog-read-time">{post.readTime}</span>
-          </div>
-          <h3 id={`post-${post.id}-title`} className="blog-card-title">{post.title}</h3>
-          <p className="blog-card-excerpt">{post.excerpt}</p>
-          {post.categories?.length > 0 && (
-            <ul className="blog-categories" aria-label="Categories">
-              {post.categories.map(cat => (
-                <li
-                  key={cat}
-                  className="blog-cat"
-                  style={{
-                    color: ACCENT.color,
-                    background: ACCENT.light,
-                    borderColor: ACCENT.border,
-                  }}
-                >
-                  {cat}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <h2 className="blog-row-title">{post.title}</h2>
+        {post.date && (
+          <time className="blog-row-date" dateTime={post.isoDate || undefined}>
+            {post.date}
+          </time>
+        )}
       </a>
-    </article>
+    </li>
   )
 }
 
 export default function Blog() {
-  const [featured, ...rest] = posts
+  injectStyles()
+  const [state, setState] = useState(initialState)
+
+  useEffect(() => {
+    if (!isThenable(posts)) return undefined
+    let cancelled = false
+    posts
+      .then((value) => {
+        if (!cancelled) setState(toState(value))
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'error', items: [] })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <>
-      <header className="page-hero">
-        <p className="page-label">// Writing</p>
-        <h1 className="page-title">Blog</h1>
-        <p className="page-subtitle">
-          Thoughts on AI, data science, and the future of technology.
-        </p>
-        <a
-          href="https://medium.com/@karanbhutani477"
-          target="_blank"
-          rel="noreferrer"
-          className="medium-btn"
-        >
-          All Posts on Medium →
-        </a>
-      </header>
-
-      {featured && (
-        <div className="blog-featured-wrap">
-          <FeaturedCard post={featured} />
+      <Section tone="cream" className="blog-header">
+        <div className="wrap">
+          <h1 className="display d-96">
+            Notes on <em>building.</em>
+          </h1>
         </div>
-      )}
+      </Section>
 
-      {rest.length > 0 && (
-        <ul className="blog-grid" aria-label="More posts">
-          {rest.map((post, i) => (
-            <li key={post.id} className="blog-grid-item">
-              <BlogCard post={post} index={i} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <Section tone="cream" className="blog-body" aria-label="Posts">
+        <div className="wrap">
+          {state.status === 'loading' && <SkeletonRows />}
+          {state.status === 'error' && <EmptyState />}
+          {state.status === 'ready' && (
+            <ul className="blog-list">
+              {state.items.map((post, i) => (
+                <PostRow key={post.id ?? post.link ?? i} post={post} />
+              ))}
+            </ul>
+          )}
+        </div>
+      </Section>
     </>
   )
 }
