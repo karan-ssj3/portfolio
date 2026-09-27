@@ -44,6 +44,11 @@ const BEATS = [
   },
 ]
 
+// True only for strings with visible text; guards every rendered text node.
+function isFilled(value) {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
 function findProject(keyword) {
   const k = keyword.toLowerCase()
   return (
@@ -54,7 +59,7 @@ function findProject(keyword) {
 }
 
 function isSafe(text) {
-  if (!text || text.includes(EM_DASH)) return false
+  if (!isFilled(text) || text.includes(EM_DASH)) return false
   let stripped = text
   ALLOWED_FIGURES.forEach((f) => {
     stripped = stripped.split(f).join('')
@@ -66,7 +71,7 @@ function isSafe(text) {
 // carrying the beat's own figure; otherwise the first sentence that passes
 // the text rules.
 function pickSentence(description, prefer) {
-  if (!description) return null
+  if (!isFilled(description)) return null
   const sentences = description
     .split(/(?<=[.!?])\s+(?=[A-Z])/)
     .map((s) => s.trim())
@@ -144,19 +149,31 @@ function AutomatedCard({ value }) {
 }
 
 function BeatCaption({ beat }) {
+  const hasTitle = isFilled(beat.title)
+  const hasSentence = isFilled(beat.sentence)
+  if (!hasTitle && !hasSentence) return null
   return (
     <div style={{ maxWidth: '60rem' }}>
-      {beat.title ? (
+      {hasTitle ? (
         <h3 className="display d-32" style={{ margin: '0 0 8px' }}>
           {beat.title}
         </h3>
       ) : null}
-      {beat.sentence ? (
+      {hasSentence ? (
         <p style={{ margin: 0, fontSize: '16px', lineHeight: 1.5, opacity: 0.8 }}>
           {beat.sentence}
         </p>
       ) : null}
     </div>
+  )
+}
+
+function BeatLabel({ label, style }) {
+  if (!isFilled(label)) return null
+  return (
+    <p className="eyebrow" style={style}>
+      {label}
+    </p>
   )
 }
 
@@ -252,9 +269,7 @@ export default function ProjectSpace() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '56px', marginTop: '48px' }}>
             {beats.map((beat) => (
               <article key={beat.id}>
-                <p className="eyebrow" style={{ margin: '0 0 16px' }}>
-                  {beat.label}
-                </p>
+                <BeatLabel label={beat.label} style={{ margin: '0 0 16px' }} />
                 <div
                   style={{
                     display: 'grid',
@@ -318,9 +333,7 @@ export default function ProjectSpace() {
                     visibility: i === 0 ? 'visible' : 'hidden',
                   }}
                 >
-                  <p className="eyebrow" style={{ margin: 0 }}>
-                    {beat.label}
-                  </p>
+                  <BeatLabel label={beat.label} style={{ margin: 0 }} />
                   <div
                     style={{
                       display: 'flex',

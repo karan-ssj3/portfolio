@@ -74,6 +74,7 @@ const STYLES = `
 }
 .faq-header {
   margin: 0;
+  line-height: 1.3;
 }
 .faq-trigger {
   all: unset;
@@ -88,7 +89,7 @@ const STYLES = `
   font-family: 'EB Garamond', Georgia, serif;
   font-weight: 400;
   font-size: 24px;
-  line-height: 1.15;
+  line-height: 1.3;
   letter-spacing: -0.01em;
   color: #1A1A1A;
   border-radius: var(--radius-card, 24px);

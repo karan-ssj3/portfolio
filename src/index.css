@@ -98,9 +98,11 @@ button {
   letter-spacing: -0.03em;
 }
 
+/* Real 400 italic face only; never a synthesised slant or bold */
 .display em {
   font-style: italic;
   font-weight: 400;
+  font-synthesis: none;
 }
 
 .d-120 { font-size: clamp(56px, 9vw, 120px); }
