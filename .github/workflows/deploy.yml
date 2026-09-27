@@ -63,11 +63,13 @@ jobs:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_SERVER_DIR: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
         run: |
-          curl --silent --show-error --list-only --ftp-pasv "ftp://$FTP_SERVER/" --user "$FTP_USERNAME:$FTP_PASSWORD"
-          echo "--- target: $FTP_SERVER_DIR ---"
-          curl --silent --show-error --list-only --ftp-pasv "ftp://$FTP_SERVER/$FTP_SERVER_DIR" --user "$FTP_USERNAME:$FTP_PASSWORD"
+          # TEMP DIAGNOSTIC - remove before merge
+          curl -sv --ftp-pasv "ftp://$FTP_SERVER/" --user "$FTP_USERNAME:$FTP_PASSWORD" -o /dev/null 2>&1 | grep -E '^< (2|5)' | grep -viE 'pass|user' || true
+          for d in "" "public_html/" "domains/" "domains/karanbhutani.com/" "domains/karanbhutani.com/public_html/"; do
+            echo "=== /$d ==="
+            curl -s --ftp-pasv --max-time 30 "ftp://$FTP_SERVER/$d" --user "$FTP_USERNAME:$FTP_PASSWORD" 2>&1 | awk '{print $1, $NF}' | head -20 || echo "(failed)"
+          done
 
       - name: Upload to Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
