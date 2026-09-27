@@ -20,8 +20,6 @@ const ROLES = [
   'Data Engineer',
 ]
 
-const CAPTION = 'Pipelines, models, and AI systems: designed, built, evaluated, and shipped.'
-
 const FALLBACK_ALT =
   'Diagram of a trained neural network whose six outputs are Data Analyst, Business Analyst, Solution Architect, AI Engineer, ML Engineer, Data Engineer'
 
@@ -41,6 +39,8 @@ const STYLES = `
   .deep-layers__track--static { height: auto; }
 }
 .deep-layers__stage {
+  --dl-safe-top: 64px;
+  --dl-safe-bottom: 160px;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -49,12 +49,19 @@ const STYLES = `
 }
 .deep-layers__eyebrow {
   position: absolute;
-  top: 96px;
-  left: 0;
-  right: 0;
-  text-align: center;
-  z-index: 2;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  z-index: 3;
   pointer-events: none;
+  white-space: nowrap;
+  opacity: 1;
+  color: rgba(255, 255, 235, 0.7);
+  background: #1A1A1A;
+  border: 1px solid rgba(255, 255, 235, 0.15);
+  border-radius: 999px;
+  padding: 6px 14px;
 }
 .deep-layers__labels {
   position: absolute;
@@ -85,12 +92,17 @@ const STYLES = `
   position: absolute;
   left: 50%;
   bottom: 48px;
-  width: min(90%, 820px);
+  width: calc(100% - 32px);
+  max-width: 640px;
+  box-sizing: border-box;
   transform: translateX(-50%);
   text-align: center;
   color: #FFFFEB;
+  background: #1A1A1A;
+  padding: 20px 28px;
+  border-radius: 24px;
   margin: 0;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
   opacity: 0;
   transition: opacity 700ms var(--ease-out);
@@ -100,22 +112,26 @@ const STYLES = `
   max-width: 1280px;
   margin: 0 auto;
 }
-.deep-layers__static .deep-layers__eyebrow { position: static; margin: 0 0 32px; }
+.deep-layers__static .deep-layers__eyebrow {
+  position: static;
+  transform: none;
+  display: table;
+  margin: 0 auto 32px;
+}
 .deep-layers__static .deep-layers__caption {
   position: static;
   transform: none;
   opacity: 1;
   width: auto;
-  max-width: 820px;
   margin: 40px auto 0;
 }
-/* Keep the caption clear of the loss-curve HUD at bottom-left. */
-@media (max-width: 1599px) {
-  .deep-layers__stage .deep-layers__caption { bottom: 236px; }
+/* Where the caption band would sit over the HUD, fade the HUD out. */
+@media (max-width: 1199px) {
+  .deep-layers__stage[data-caption='on'] .loss-hud { opacity: 0; }
 }
 @media (max-width: 719px) {
   .deep-layers__label { font-size: 12px; padding: 5px 10px; }
-  .deep-layers__stage .deep-layers__caption { bottom: 176px; }
+  .deep-layers__stage .deep-layers__caption { bottom: 88px; }
 }
 `
 
@@ -133,6 +149,14 @@ function useIsMobile() {
   }, [])
 
   return mobile
+}
+
+function Caption({ captionRef }) {
+  return (
+    <p ref={captionRef} className="display d-32 deep-layers__caption">
+      One network, six <em>roles.</em>
+    </p>
+  )
 }
 
 /**
@@ -169,8 +193,12 @@ export default function DeepLayers() {
       if (labelsLayerRef.current) {
         labelsLayerRef.current.style.opacity = p > LABELS_AT ? '1' : '0'
       }
+      const showCaption = p > CAPTION_AT
       if (captionRef.current) {
-        captionRef.current.style.opacity = p > CAPTION_AT ? '1' : '0'
+        captionRef.current.style.opacity = showCaption ? '1' : '0'
+      }
+      if (stageRef.current) {
+        stageRef.current.dataset.caption = showCaption ? 'on' : 'off'
       }
     }
 
@@ -250,6 +278,7 @@ export default function DeepLayers() {
   }
 
   if (isStatic) {
+    // Fallback path: no HUD; the fallback SVG carries the only loss curve.
     return (
       <Section tone="ink" overlapTop id="deep-layers">
         <style>{STYLES}</style>
@@ -257,7 +286,7 @@ export default function DeepLayers() {
           <div className="deep-layers__static">
             <p className="eyebrow deep-layers__eyebrow">DEEP LAYERS LEARNING</p>
             <DeepLayersFallback title={FALLBACK_ALT} />
-            <p className="display d-32 deep-layers__caption">{CAPTION}</p>
+            <Caption />
           </div>
         </div>
       </Section>
@@ -271,13 +300,14 @@ export default function DeepLayers() {
         <div
           ref={stageRef}
           className="deep-layers__stage"
+          data-caption="off"
           onPointerMove={onPointerMove}
           onPointerLeave={onPointerLeave}
           onPointerDown={onPointerDown}
         >
           <p className="eyebrow deep-layers__eyebrow">DEEP LAYERS LEARNING</p>
 
-          <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+          <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
             <CanvasWrapper
               scene={loadScene}
               sceneProps={{ mobile, highTier: gpu === 'high', labelsRef }}
@@ -301,9 +331,7 @@ export default function DeepLayers() {
 
           <LossCurveHUD />
 
-          <p ref={captionRef} className="display d-32 deep-layers__caption">
-            {CAPTION}
-          </p>
+          <Caption captionRef={captionRef} />
         </div>
       </div>
     </Section>

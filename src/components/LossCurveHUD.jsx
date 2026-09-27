@@ -74,6 +74,8 @@ const STYLES = `
   background: rgba(26, 26, 26, 0.6);
   color: #FFFFEB;
   font-family: 'Figtree', system-ui, sans-serif;
+  opacity: 1;
+  transition: opacity 240ms var(--ease-out);
 }
 .loss-hud__head {
   display: flex;
@@ -82,7 +84,12 @@ const STYLES = `
   gap: 16px;
   margin-bottom: 10px;
 }
-.loss-hud__head .eyebrow { margin: 0; }
+.loss-hud__head .loss-hud__label {
+  margin: 0;
+  font-size: 12px;
+  opacity: 1;
+  color: rgba(255, 255, 235, 0.7);
+}
 .loss-hud__epoch {
   font-size: 12px;
   font-weight: 600;
@@ -103,7 +110,7 @@ const STYLES = `
   opacity: 0.8;
 }
 @media (max-width: 719px) {
-  .loss-hud { left: 12px; right: 12px; bottom: 12px; padding: 12px 14px 10px; }
+  .loss-hud { left: 12px; right: 12px; bottom: 72px; padding: 12px 14px 10px; }
   .loss-hud__svg { width: 100%; height: 90px; }
 }
 `
@@ -229,10 +236,10 @@ export default function LossCurveHUD() {
   }, [reducedMotion])
 
   return (
-    <div className="loss-hud" aria-hidden="true">
+    <div className="loss-hud" data-testid="loss-hud" aria-hidden="true">
       <style>{STYLES}</style>
       <div className="loss-hud__head">
-        <p className="eyebrow">Illustrative training run</p>
+        <p className="eyebrow loss-hud__label">Illustrative training run</p>
         <span ref={epochRef} className="loss-hud__epoch tnum">
           {`EPOCH ${reducedMotion ? EPOCHS : 0} / ${EPOCHS}`}
         </span>
