@@ -57,14 +57,17 @@ jobs:
             fi
           done
 
-      - name: List FTP root (dry run only)
+      - name: List FTP root and target dir (dry run only)
         if: ${{ env.DRY_RUN == 'true' }}
         env:
           FTP_SERVER: ${{ secrets.FTP_SERVER }}
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SERVER_DIR: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
         run: |
           curl --silent --show-error --list-only --ftp-pasv "ftp://$FTP_SERVER/" --user "$FTP_USERNAME:$FTP_PASSWORD"
+          echo "--- target: $FTP_SERVER_DIR ---"
+          curl --silent --show-error --list-only --ftp-pasv "ftp://$FTP_SERVER/$FTP_SERVER_DIR" --user "$FTP_USERNAME:$FTP_PASSWORD"
 
       - name: Upload to Hostinger
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
