@@ -58,10 +58,6 @@ export default function App() {
         <ReducedMotionProvider>
           <ScrollToTop />
           <style>{`
-            :focus-visible {
-              outline: 2px solid transparent;
-              box-shadow: 0 0 0 2px #9C5636, 0 0 0 4px #1C1B18;
-            }
             @media (prefers-reduced-motion: reduce) {
               *, *::before, *::after {
                 animation-duration: 0.01ms !important;
@@ -78,14 +74,10 @@ export default function App() {
               max-width: 100vw;
               overflow-x: clip;
             }
+            /* Slabs run full-bleed; sections own their inner padding. */
             main {
               outline: none;
-              padding: 0 1rem;
-            }
-            @media (max-width: 480px) {
-              main {
-                padding: 0 0.5rem;
-              }
+              padding: 0;
             }
           `}</style>
           <div className="app">
