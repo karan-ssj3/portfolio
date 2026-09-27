@@ -47,6 +47,8 @@ jobs:
 
       - name: Build site
         run: npm run build
+        env:
+          VITE_CF_BEACON_TOKEN: ${{ vars.VITE_CF_BEACON_TOKEN }}
 
       - name: Verify build output
         run: |
