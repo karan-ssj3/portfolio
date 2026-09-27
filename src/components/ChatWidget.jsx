@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 const WELCOME = {
   role: 'assistant',
@@ -10,6 +10,11 @@ const SUGGESTED = [
   "Tell me about his RAG projects",
   "What are his strongest skills?",
 ]
+
+function prefersReducedMotion() {
+  return typeof window !== 'undefined'
+    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+}
 
 function renderMarkdown(text) {
   const lines = text.split('\n')
@@ -54,14 +59,60 @@ export default function ChatWidget() {
   const [error,         setError]         = useState(null)
   const bottomRef = useRef(null)
   const inputRef  = useRef(null)
+  const panelRef  = useRef(null)
+  const triggerRef = useRef(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    bottomRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    })
   }, [messages, loading])
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 300)
+    if (open) {
+      const delay = prefersReducedMotion() ? 0 : 300
+      const t = setTimeout(() => inputRef.current?.focus(), delay)
+      return () => clearTimeout(t)
+    }
   }, [open])
+
+  const closePanel = useCallback(() => {
+    setOpen(false)
+    triggerRef.current?.focus()
+  }, [])
+
+  // Focus trap: keep Tab cycling inside the open panel; Escape closes.
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        closePanel()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const panel = panelRef.current
+      if (!panel) return
+      const focusables = panel.querySelectorAll(
+        'button, input, [href], [tabindex]:not([tabindex="-1"])'
+      )
+      if (!focusables.length) return
+      const first = focusables[0]
+      const last  = focusables[focusables.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      } else if (!panel.contains(document.activeElement)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open, closePanel])
 
   const send = async (text) => {
     const q = (text || input).trim()
@@ -113,16 +164,29 @@ export default function ChatWidget() {
   return (
     <>
       {/* Panel */}
-      <div className={`cw-panel${open ? ' cw-panel-open' : ''}`}>
+      <div
+        ref={panelRef}
+        className={`cw-panel${open ? ' cw-panel-open' : ''}`}
+        role="dialog"
+        aria-label="Ask Karan's AI"
+        aria-hidden={!open}
+      >
         <div className="cw-header">
           <div className="cw-header-dot" />
           <div className="cw-header-title">Ask Karan's AI</div>
           <div className="cw-header-badge">RAG-powered</div>
+          <button
+            className="cw-close"
+            onClick={closePanel}
+            aria-label="Close chat"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
         </div>
 
         <div className="cw-messages">
           {messages.map((msg, i) => (
-            <div key={i} className={`cw-msg cw-msg-${msg.role}`}>
+            <div key={i} className={`cw-msg cw-msg-${msg.role}${msg.isSystem ? ' cw-msg-system' : ''}`}>
               <div className={`cw-avatar cw-avatar-${msg.role}`}>
                 {msg.role === 'assistant' ? 'K' : '↑'}
               </div>
@@ -178,9 +242,11 @@ export default function ChatWidget() {
 
       {/* Trigger */}
       <button
+        ref={triggerRef}
         className={`cw-trigger${open ? ' cw-trigger-open' : ''}`}
         onClick={() => setOpen(o => !o)}
         aria-label={open ? 'Close chat' : 'Open chat'}
+        aria-expanded={open}
       >
         <span className="cw-trigger-icon">{open ? '+' : '◈'}</span>
       </button>
