@@ -1,17 +1,19 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
-import { useEffect, createContext, useContext, useState } from 'react'
+import { useEffect, createContext, useContext, useState, lazy, Suspense } from 'react'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import ScrollProvider, { useScrollContext } from './providers/ScrollProvider'
 import SkipLink from './components/SkipLink'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
-import ChatWidget from './components/ChatWidget'
 import Home from './pages/Home'
-import Projects from './pages/Projects'
-import Experience from './pages/Experience'
-import Blog from './pages/Blog'
-import Contact from './pages/Contact'
 import './styles/layout.css'
+
+// Non-home routes and the chat widget ship as separate chunks.
+const Projects = lazy(() => import('./pages/Projects'))
+const Experience = lazy(() => import('./pages/Experience'))
+const Blog = lazy(() => import('./pages/Blog'))
+const Contact = lazy(() => import('./pages/Contact'))
+const ChatWidget = lazy(() => import('./components/ChatWidget'))
 
 const ReducedMotionContext = createContext(false)
 
@@ -51,6 +53,27 @@ function ScrollToTop() {
   return null
 }
 
+function PageFallback() {
+  return <div aria-hidden="true" style={{ minHeight: '100svh', background: '#FFFFEB' }} />
+}
+
+// Mounts the chat widget only after the window 'load' event.
+function DeferredChatWidget() {
+  const [ready, setReady] = useState(() => document.readyState === 'complete')
+  useEffect(() => {
+    if (ready) return undefined
+    const onLoad = () => setReady(true)
+    window.addEventListener('load', onLoad)
+    return () => window.removeEventListener('load', onLoad)
+  }, [ready])
+  if (!ready) return null
+  return (
+    <Suspense fallback={null}>
+      <ChatWidget />
+    </Suspense>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -84,16 +107,18 @@ export default function App() {
             <SkipLink />
             <Navbar />
             <main id="main" tabIndex={-1}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/projects" element={<Projects />} />
-                <Route path="/experience" element={<Experience />} />
-                <Route path="/blog" element={<Blog />} />
-                <Route path="/contact" element={<Contact />} />
-              </Routes>
+              <Suspense fallback={<PageFallback />}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/projects" element={<Projects />} />
+                  <Route path="/experience" element={<Experience />} />
+                  <Route path="/blog" element={<Blog />} />
+                  <Route path="/contact" element={<Contact />} />
+                </Routes>
+              </Suspense>
             </main>
             <Footer />
-            <ChatWidget />
+            <DeferredChatWidget />
           </div>
         </ReducedMotionProvider>
       </ScrollProvider>

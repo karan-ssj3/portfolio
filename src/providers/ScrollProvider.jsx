@@ -4,6 +4,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { gsap } from 'gsap'
 import { getGPUTier } from '../lib/gpu'
 
+// Register at module scope so eager consumers (ScrollToTop, Home sections)
+// can use ScrollTrigger before the deferred Lenis setup runs.
+gsap.registerPlugin(ScrollTrigger)
+
 const ScrollContext = createContext({
   reducedMotion: false,
   gpuTier: 'mid',
@@ -12,7 +16,17 @@ const ScrollContext = createContext({
 
 export const useScrollContext = () => useContext(ScrollContext)
 
-gsap.registerPlugin(ScrollTrigger)
+// Idle scheduling with a timeout fallback for browsers without rIC.
+const requestIdle = (cb, timeout) =>
+  typeof window.requestIdleCallback === 'function'
+    ? { id: window.requestIdleCallback(cb, { timeout }), idle: true }
+    : { id: setTimeout(cb, timeout), idle: false }
+
+const cancelIdle = (h) => {
+  if (!h) return
+  if (h.idle) window.cancelIdleCallback(h.id)
+  else clearTimeout(h.id)
+}
 
 export default function ScrollProvider({ children }) {
   const [reducedMotion, setReducedMotion] = useState(false)
@@ -24,8 +38,10 @@ export default function ScrollProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false
+    let ready = false
     let refreshTimer = null
     let lastHeight = 0
+    let idleHandle = null
 
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)')
 
@@ -34,7 +50,7 @@ export default function ScrollProvider({ children }) {
     const scheduleRefresh = () => {
       clearTimeout(refreshTimer)
       refreshTimer = setTimeout(() => {
-        if (cancelled) return
+        if (cancelled || !ready) return
         ScrollTrigger.refresh()
         lenisRef.current?.resize()
       }, 150)
@@ -43,7 +59,7 @@ export default function ScrollProvider({ children }) {
     // Immediate refresh for the window load and fonts-ready milestones,
     // followed by a debounced pass to catch anything still settling.
     const refreshNow = () => {
-      if (cancelled) return
+      if (cancelled || !ready) return
       ScrollTrigger.refresh()
       lenisRef.current?.resize()
       scheduleRefresh()
@@ -59,7 +75,7 @@ export default function ScrollProvider({ children }) {
     }
 
     const createLenis = () => {
-      if (lenisRef.current) return
+      if (lenisRef.current || !ready) return
       // Never smooth scroll under reduced motion.
       if (prefersReduced.matches) return
       const lenis = new Lenis({
@@ -93,7 +109,15 @@ export default function ScrollProvider({ children }) {
       createLenis()
     }
 
-    evaluate()
+    // Defer smooth scrolling until the main thread is idle; native
+    // scrolling works until then.
+    idleHandle = requestIdle(() => {
+      idleHandle = null
+      if (cancelled) return
+      ready = true
+      evaluate()
+      refreshNow()
+    }, 1200)
 
     const onMediaChange = (e) => {
       const shouldReduce = e.matches || tierRef.current === 'low'
@@ -122,6 +146,8 @@ export default function ScrollProvider({ children }) {
 
     return () => {
       cancelled = true
+      cancelIdle(idleHandle)
+      idleHandle = null
       clearTimeout(refreshTimer)
       ro?.disconnect()
       window.removeEventListener('load', refreshNow)

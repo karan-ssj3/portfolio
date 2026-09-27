@@ -116,7 +116,7 @@ export default function SignalRibbon() {
       tokens: [], pending: 0, next: 0, prevEnv: 0, sinceSpawn: 0,
       bars: new Float32Array(BAR_COUNT), raf: 0, last: 0,
       inView: true, lastY: window.scrollY,
-      widths: new Map(),
+      widths: new Map(), armed: false,
     }
 
     const buildEl = (label) => {
@@ -335,7 +335,7 @@ export default function SignalRibbon() {
     }
 
     const start = () => {
-      if (reduced || st.raf || !st.inView || document.hidden) return
+      if (!st.armed || reduced || st.raf || !st.inView || document.hidden) return
       st.last = performance.now()
       st.raf = requestAnimationFrame(tick)
     }
@@ -344,9 +344,27 @@ export default function SignalRibbon() {
       st.raf = 0
     }
 
+    // Static frame first; the loop is armed after load plus idle.
     layout()
     draw()
-    start()
+
+    let idleId = 0
+    let idleIsRic = false
+    const arm = () => {
+      idleId = 0
+      st.armed = true
+      start()
+    }
+    const onLoad = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        idleIsRic = true
+        idleId = window.requestIdleCallback(arm, { timeout: 1200 })
+      } else {
+        idleId = setTimeout(arm, 1)
+      }
+    }
+    if (document.readyState === 'complete') onLoad()
+    else window.addEventListener('load', onLoad)
 
     const ro = typeof ResizeObserver !== 'undefined'
       ? new ResizeObserver(() => { layout(); draw() })
@@ -375,6 +393,11 @@ export default function SignalRibbon() {
 
     return () => {
       stop()
+      window.removeEventListener('load', onLoad)
+      if (idleId) {
+        if (idleIsRic) window.cancelIdleCallback(idleId)
+        else clearTimeout(idleId)
+      }
       if (ro) ro.disconnect()
       if (io) io.disconnect()
       document.removeEventListener('visibilitychange', onVis)
