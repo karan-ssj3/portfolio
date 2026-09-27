@@ -1,10 +1,12 @@
-import { Suspense, useEffect, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import useGPU from '../../hooks/useGPU'
 import useReducedMotion from '../../hooks/useReducedMotion'
 import useLazy3D from '../../hooks/useLazy3D'
 import FallbackImage from './FallbackImage'
 import SceneErrorBoundary from './SceneErrorBoundary'
+
+// Loaded on demand so three.js never lands in the main chunk.
+const Canvas = lazy(() => import('./R3FCanvas'))
 
 /**
  * CanvasWrapper
@@ -103,16 +105,18 @@ export default function CanvasWrapper({
               transition: 'opacity 0.3s ease',
             }}
           >
-            <Canvas
-              dpr={dpr}
-              frameloop="always"
-              style={{ width: '100%', height: '100%' }}
-              {...canvasProps}
-            >
-              <Suspense fallback={null}>
-                <LazyScene {...sceneProps} inView={inView} />
-              </Suspense>
-            </Canvas>
+            <Suspense fallback={null}>
+              <Canvas
+                dpr={dpr}
+                frameloop="always"
+                style={{ width: '100%', height: '100%' }}
+                {...canvasProps}
+              >
+                <Suspense fallback={null}>
+                  <LazyScene {...sceneProps} inView={inView} />
+                </Suspense>
+              </Canvas>
+            </Suspense>
           </div>
         </SceneErrorBoundary>
       )}

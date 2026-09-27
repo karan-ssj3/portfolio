@@ -39,4 +39,21 @@ function rssBuildPlugin() {
 
 export default defineConfig({
   plugins: [react(), rssBuildPlugin()],
+  build: {
+    rollupOptions: {
+      output: {
+        // Group three + R3F into one chunk requested only by lazy 3D modules.
+        manualChunks(id) {
+          if (
+            id.includes('node_modules/three/') ||
+            id.includes('node_modules/@react-three/') ||
+            id.includes('node_modules/three-stdlib/')
+          ) {
+            return 'three'
+          }
+          return undefined
+        },
+      },
+    },
+  },
 })
