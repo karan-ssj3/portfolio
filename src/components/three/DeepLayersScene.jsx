@@ -28,11 +28,13 @@ const CAMERA_PATH = [
   [3.5, 1.8, 6],
   [4.5, 0.8, 0],
   [3, 4, -2],
-  [0, 3, 11],
+  [0, 3, 13],
 ]
 const CAMERA_LAMBDA = 4
-const LABEL_MARGIN = 8
+const LABEL_EDGE = 16
 const LABEL_LIFT = 18
+const SAFE_TOP_FALLBACK = 64
+const SAFE_BOTTOM_FALLBACK = 160
 
 function roundedRectShape(width, height, radius) {
   const x = -width / 2
@@ -66,6 +68,12 @@ function clampRange(value, min, max) {
   return Math.min(max, Math.max(min, value))
 }
 
+// Reads a px CSS variable, falling back when missing or unparsable.
+function readPx(style, name, fallback) {
+  const v = parseFloat(style.getPropertyValue(name))
+  return Number.isFinite(v) ? v : fallback
+}
+
 // Scroll progress to curve parameter: clamped onto the curve's 0..1 range.
 function remap(progress) {
   return clamp01(progress)
@@ -92,7 +100,7 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
   const neuronsRef = useRef(null)
   const frameRef = useRef(0)
 
-  const { camera, scene } = useThree()
+  const { camera, scene, gl } = useThree()
 
   const sheetGeometry = useMemo(
     () => new THREE.ShapeGeometry(roundedRectShape(PLANE_WIDTH, PLANE_HEIGHT, SHEET_RADIUS), 8),
@@ -103,16 +111,18 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
       new THREE.MeshBasicMaterial({
         color: CREAM,
         transparent: true,
-        opacity: 0.06,
+        opacity: 0.03,
+        blending: THREE.NormalBlending,
         depthWrite: false,
         side: THREE.DoubleSide,
+        toneMapped: false,
       }),
     [],
   )
 
   const neuronGeometry = useMemo(() => new THREE.CircleGeometry(NEURON_RADIUS, 16), [])
   // Default white material colour, so instanceColor carries the palette hex exactly.
-  const neuronMaterial = useMemo(() => new THREE.MeshBasicMaterial(), [])
+  const neuronMaterial = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), [])
 
   const edgeGeometry = useMemo(() => {
     const { edges } = topology
@@ -138,6 +148,7 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
+        toneMapped: false,
       }),
     [uniforms],
   )
@@ -151,6 +162,7 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
         transparent: true,
         depthWrite: false,
         blending: THREE.AdditiveBlending,
+        toneMapped: false,
       }),
     [uniforms],
   )
@@ -185,6 +197,16 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
     }),
     [],
   )
+
+  // No tone mapping and a fully transparent clear, so the ink slab shows through.
+  useLayoutEffect(() => {
+    const prevToneMapping = gl.toneMapping
+    gl.toneMapping = THREE.NoToneMapping
+    gl.setClearColor(0x000000, 0)
+    return () => {
+      gl.toneMapping = prevToneMapping
+    }
+  }, [gl])
 
   // Transparent background so the ink slab shows through; initial camera pose.
   useLayoutEffect(() => {
@@ -282,13 +304,28 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
 
     frameRef.current += 1
 
-    // Role labels every 3rd frame: project outputs to screen, clamp inside the stage.
+    // Role labels every 3rd frame: project outputs to screen, clamp inside the
+    // stage safe area (clear of the eyebrow and the caption band).
     if (frameRef.current % 3 === 0 && Array.isArray(labelsRef)) {
       const { width, height } = state.size
+      const canvasRect = state.gl.domElement.getBoundingClientRect()
       const outputs = topology.outputPositions
+      let stage = null
+      let stageRect = null
+      let safeTop = SAFE_TOP_FALLBACK
+      let safeBottom = SAFE_BOTTOM_FALLBACK
       for (let k = 0; k < outputs.length; k += 1) {
         const el = labelsRef[k]?.current
         if (!el) continue
+        if (!stage) {
+          stage = el.offsetParent || state.gl.domElement.parentElement
+          if (stage) {
+            stageRect = stage.getBoundingClientRect()
+            const style = window.getComputedStyle(stage)
+            safeTop = readPx(style, '--dl-safe-top', SAFE_TOP_FALLBACK)
+            safeBottom = readPx(style, '--dl-safe-bottom', SAFE_BOTTOM_FALLBACK)
+          }
+        }
         const o = outputs[k]
         scratch.view.set(o.x, o.y, o.z).applyMatrix4(cam.matrixWorldInverse)
         if (scratch.view.z > -cam.near) {
@@ -296,17 +333,21 @@ export default function DeepLayersScene({ mobile = false, highTier = false, labe
           continue
         }
         scratch.proj.set(o.x, o.y, o.z).project(cam)
+        const stageW = stageRect ? stageRect.width : width
+        const stageH = stageRect ? stageRect.height : height
+        const offX = stageRect ? canvasRect.left - stageRect.left : 0
+        const offY = stageRect ? canvasRect.top - stageRect.top : 0
         const w = el.offsetWidth
         const h = el.offsetHeight
         const cx = clampRange(
-          (scratch.proj.x * 0.5 + 0.5) * width,
-          w / 2 + LABEL_MARGIN,
-          width - w / 2 - LABEL_MARGIN,
+          offX + (scratch.proj.x * 0.5 + 0.5) * width,
+          w / 2 + LABEL_EDGE,
+          stageW - w / 2 - LABEL_EDGE,
         )
         const cy = clampRange(
-          (-scratch.proj.y * 0.5 + 0.5) * height - LABEL_LIFT,
-          h / 2 + LABEL_MARGIN,
-          height - h / 2 - LABEL_MARGIN,
+          offY + (-scratch.proj.y * 0.5 + 0.5) * height - LABEL_LIFT,
+          safeTop + h / 2,
+          stageH - safeBottom - h / 2,
         )
         el.style.transform = `translate3d(${(cx - w / 2).toFixed(1)}px, ${(cy - h / 2).toFixed(1)}px, 0)`
         el.style.visibility = 'visible'

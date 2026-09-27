@@ -106,21 +106,23 @@ export const edgeFragment = /* glsl */ `
     float w = vW;
 
     // Base weight alpha; weak edges prune toward 0.03 late in training.
-    float alpha = 0.04 + 0.5 * w;
+    float alpha = 0.02 + 0.3 * w;
     float prune = smoothstep(0.6, 1.0, t) * (1.0 - smoothstep(0.15, 0.4, w));
     alpha = mix(alpha, 0.03, prune);
 
-    vec3 color = uColorBase * alpha;
+    // Strong edges glow toward amber.
+    vec3 baseColor = mix(uColorBase, uColorForward, smoothstep(0.6, 1.0, w));
+    vec3 color = baseColor * alpha;
 
-    // Forward pass (amber) and backprop wave (pink).
+    // Forward pass (amber, 1.4x) and backprop wave (pink).
     float forward = band(vPhase, uForward) * sweepGate(uForward);
     float backward = band(vPhase, 1.0 - uBackward) * sweepGate(uBackward);
-    color += uColorForward * forward * w;
+    color += uColorForward * forward * w * 1.4;
     color += uColorBack * backward * w;
 
     // Early training noise: coral flicker that fades out by t = 0.25.
     if (t < 0.25) {
-      color += uColorNoise * vNoise * (0.25 - t) * 2.0 * 0.6;
+      color += uColorNoise * vNoise * (0.25 - t) * 2.0 * 0.9;
     }
 
     // Pointer drawing on the input layer.
@@ -180,7 +182,7 @@ export const pulseFragment = /* glsl */ `
     if (r > 0.5 || vGlow <= 0.001) discard;
 
     float soft = 1.0 - smoothstep(0.3, 0.5, r);
-    gl_FragColor = vec4(uColorForward * soft * vGlow * 0.45, 1.0);
+    gl_FragColor = vec4(uColorForward * soft * vGlow * 0.63, 1.0);
     ${OUTPUT_CHUNK}
   }
 `
