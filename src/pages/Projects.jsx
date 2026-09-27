@@ -1,182 +1,185 @@
-import { useState, useRef, useEffect } from 'react'
 import { PROJECTS } from '../data/projects'
+import Section from '../components/Section'
 
-const ACCENT = '#9C5636'
-const ACCENT_SOFT = 'rgba(156, 86, 54, 0.10)'
-const ACCENT_BORDER = 'rgba(156, 86, 54, 0.22)'
-
-function PatternSVG({ type }) {
-  const c = ACCENT
-  const patterns = {
-    circles: (
-      <svg viewBox="0 0 400 160" aria-hidden="true" style={{ width: '100%', height: '100%' }}>
-        <circle cx="320" cy="80" r="90" fill="none" stroke={c} strokeWidth="1" opacity=".18" />
-        <circle cx="320" cy="80" r="60" fill="none" stroke={c} strokeWidth="1" opacity=".24" />
-        <circle cx="320" cy="80" r="30" fill="none" stroke={c} strokeWidth="1.5" opacity=".34" />
-        <circle cx="320" cy="80" r="4" fill={c} opacity=".55" />
-        <circle cx="80" cy="120" r="50" fill="none" stroke={c} strokeWidth=".5" opacity=".12" />
-        <line x1="80" y1="120" x2="320" y2="80" stroke={c} strokeWidth=".5" opacity=".1" strokeDasharray="4 6" />
-      </svg>
-    ),
-    diagonal: (
-      <svg viewBox="0 0 400 160" aria-hidden="true" style={{ width: '100%', height: '100%' }}>
-        {Array.from({ length: 12 }).map((_, i) => (
-          <line key={i} x1={i * 40 - 40} y1="180" x2={i * 40 + 120} y2="-20" stroke={c} strokeWidth=".8" opacity={.05 + (i % 3) * .03} />
-        ))}
-        <rect x="300" y="40" width="60" height="60" rx="4" fill="none" stroke={c} strokeWidth="1.2" opacity=".24" transform="rotate(15 330 70)" />
-      </svg>
-    ),
-    grid: (
-      <svg viewBox="0 0 400 160" aria-hidden="true" style={{ width: '100%', height: '100%' }}>
-        {Array.from({ length: 8 }).map((_, i) => (
-          <line key={`h${i}`} x1="0" y1={i * 24 + 10} x2="400" y2={i * 24 + 10} stroke={c} strokeWidth=".5" opacity=".08" />
-        ))}
-        {Array.from({ length: 16 }).map((_, i) => (
-          <line key={`v${i}`} x1={i * 28 + 10} y1="0" x2={i * 28 + 10} y2="160" stroke={c} strokeWidth=".5" opacity=".08" />
-        ))}
-        <rect x="260" y="34" width="96" height="72" rx="6" fill={c} opacity=".08" />
-        <circle cx="308" cy="70" r="18" fill="none" stroke={c} strokeWidth="1" opacity=".24" />
-      </svg>
-    ),
-    waves: (
-      <svg viewBox="0 0 400 160" aria-hidden="true" style={{ width: '100%', height: '100%' }}>
-        {[40, 70, 100, 130].map((y, i) => (
-          <path key={i} d={`M0 ${y} Q100 ${y - 20 + i * 5} 200 ${y} T400 ${y}`} fill="none" stroke={c} strokeWidth=".8" opacity={.08 + i * .03} />
-        ))}
-        <circle cx="340" cy="60" r="24" fill="none" stroke={c} strokeWidth="1.2" opacity=".18" />
-      </svg>
-    ),
-    dots: (
-      <svg viewBox="0 0 400 160" aria-hidden="true" style={{ width: '100%', height: '100%' }}>
-        {Array.from({ length: 120 }).map((_, i) => {
-          const x = (i % 15) * 28 + 10
-          const y = Math.floor(i / 15) * 22 + 10
-          const dist = Math.sqrt((x - 320) ** 2 + (y - 80) ** 2)
-          return (
-            <circle
-              key={i}
-              cx={x}
-              cy={y}
-              r={dist < 60 ? 2.5 : dist < 100 ? 1.5 : 1}
-              fill={c}
-              opacity={dist < 60 ? .28 : dist < 100 ? .14 : .06}
-            />
-          )
-        })}
-      </svg>
-    ),
-    mesh: (
-      <svg viewBox="0 0 400 160" aria-hidden="true" style={{ width: '100%', height: '100%' }}>
-        <polygon points="310,30 360,80 310,130 260,80" fill="none" stroke={c} strokeWidth="1" opacity=".14" />
-        <polygon points="310,50 340,80 310,110 280,80" fill="none" stroke={c} strokeWidth=".8" opacity=".2" />
-        {[0, 1, 2, 3, 4].map((i) => (
-          <line key={i} x1={50 + i * 30} y1={20 + i * 25} x2={150 + i * 20} y2={80 + i * 15} stroke={c} strokeWidth=".6" opacity=".08" />
-        ))}
-      </svg>
-    ),
-  }
-  return patterns[type] || patterns.circles
+// Page-scoped styles, injected once alongside the page (tokens from index.css).
+const PROJECTS_CSS = `
+.projects-hero {
+  padding-top: 160px;
+  padding-bottom: 96px;
 }
+.projects-hero__title {
+  margin: 0;
+  color: #FFFFEB;
+}
+.projects-list {
+  padding: 96px 0 120px;
+}
+.proj-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.proj-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background-color: #FFFFEB;
+  color: #1A1A1A;
+  border: 1px solid rgba(26, 26, 26, 0.1);
+  border-radius: var(--radius-card, 24px);
+  padding: 28px;
+  overflow-wrap: anywhere;
+  transition: background-color 180ms var(--ease-out);
+}
+.proj-card:hover,
+.proj-card:focus-within {
+  background-color: #F0D7FF;
+}
+.proj-card__metric {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+.proj-card__dash {
+  flex: none;
+  display: inline-block;
+  width: 24px;
+  height: 2px;
+  background: #FFA946;
+}
+.proj-card__subtitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(26, 26, 26, 0.6);
+}
+.proj-card__title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+.proj-card__desc {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.proj-card__tags {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.proj-card__tag {
+  font-size: 13px;
+  line-height: 1.3;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(26, 26, 26, 0.1);
+}
+.proj-card__links {
+  margin-top: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 8px;
+}
+.proj-card__link {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1A1A1A;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(26, 26, 26, 0.3);
+}
+.proj-card__link:hover {
+  border-bottom-color: #1A1A1A;
+}
+@media (max-width: 1024px) {
+  .proj-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .projects-hero { padding-bottom: 64px; }
+  .projects-list { padding: 64px 0 96px; }
+  .proj-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+`
 
-const PATTERNS = ['circles', 'diagonal', 'grid', 'waves', 'dots', 'mesh']
-
-const FILTERS = [
-  { key: 'All',    label: 'All',     test: () => true },
-  { key: 'Agents', label: 'Agents',  test: (p) => /agent|trading|classif/i.test(p.title) },
-  { key: 'RAG',    label: 'RAG',     test: (p) => /rag|tax|financial/i.test(p.title) },
-  { key: 'ML',     label: 'ML',      test: (p) => /ml|time.series|classif/i.test(p.title) },
-]
-
-function ProjectCard({ project, index, pattern }) {
-  const ref = useRef(null)
-  const [visible, setVisible] = useState(false)
-  const [immediate, setImmediate] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduced) {
-      setImmediate(true)
-      return
-    }
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); obs.disconnect() } },
-      { threshold: 0.15 }
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
+function ProjectCard({ project }) {
+  // Only render a metric if the data carries one; never derive it from copy.
+  const metric = project.metric ?? project.impact
+  const tags = Array.isArray(project.techStack) ? project.techStack : []
 
   return (
-    <article
-      ref={ref}
-      className={`proj-card${visible && !immediate ? ' proj-visible' : ''}`}
-      style={immediate ? { opacity: 1, transform: 'none', transition: 'none' } : undefined}
-    >
-      <div className="proj-header">
-        <PatternSVG type={pattern} />
-        <span className="proj-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-      </div>
+    <article className="proj-card">
+      {metric && (
+        <p className="proj-card__metric display d-48">
+          <span className="proj-card__dash" aria-hidden="true" />
+          <span>{metric}</span>
+        </p>
+      )}
 
-      <div className="proj-body">
-        <h3 className="proj-title">{project.title}</h3>
-        {project.subtitle && <p className="proj-subtitle">{project.subtitle}</p>}
-        <p className="proj-desc">{project.description}</p>
-        <ul className="proj-tech" aria-label="Tech stack">
-          {project.techStack.map((t) => (
-            <li key={t} className="proj-tech-badge">{t}</li>
+      {project.subtitle && <p className="proj-card__subtitle">{project.subtitle}</p>}
+      <h2 className="proj-card__title display">{project.title}</h2>
+      {project.description && <p className="proj-card__desc">{project.description}</p>}
+
+      {tags.length > 0 && (
+        <ul className="proj-card__tags" aria-label="Tech stack">
+          {tags.map((t) => (
+            <li key={t} className="proj-card__tag">{t}</li>
           ))}
         </ul>
-        {project.github && (
-          <a href={project.github} target="_blank" rel="noreferrer" className="proj-link">
-            View on GitHub <span className="proj-link-arrow" aria-hidden="true">→</span>
-          </a>
-        )}
-      </div>
+      )}
+
+      {(project.github || project.demo) && (
+        <div className="proj-card__links">
+          {project.github && (
+            <a href={project.github} target="_blank" rel="noopener noreferrer" className="proj-card__link">
+              View on GitHub <span aria-hidden="true">→</span>
+            </a>
+          )}
+          {project.demo && (
+            <a href={project.demo} target="_blank" rel="noopener noreferrer" className="proj-card__link">
+              Live demo <span aria-hidden="true">→</span>
+            </a>
+          )}
+        </div>
+      )}
     </article>
   )
 }
 
 export default function Projects() {
-  const [filter, setFilter] = useState('All')
-  const active = FILTERS.find((f) => f.key === filter) || FILTERS[0]
-  const filtered = PROJECTS.filter(active.test)
-
   return (
-    <>
-      <main className="page-main">
-        <header className="page-hero">
-          <p className="page-label">// Portfolio</p>
-          <h1 className="page-title">Projects</h1>
-          <p className="page-subtitle">AI systems, RAG pipelines, and data engineering at scale</p>
+    <div className="page page--projects">
+      <style>{PROJECTS_CSS}</style>
 
-          <div className="filter-pills" role="group" aria-label="Filter projects" style={{ marginTop: '2rem' }}>
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                className={`filter-pill${filter === f.key ? ' filter-active' : ''}`}
-                onClick={() => setFilter(f.key)}
-                aria-pressed={filter === f.key}
-              >
-                {f.label}
-              </button>
+      <Section tone="teal" roundedBottom className="projects-hero" as="header">
+        <div className="wrap">
+          <h1 className="projects-hero__title display d-96">
+            Selected <em>work.</em>
+          </h1>
+        </div>
+      </Section>
+
+      <Section tone="cream" className="projects-list" aria-label="Project list">
+        <div className="wrap">
+          <ul className="proj-grid">
+            {PROJECTS.map((p) => (
+              <li key={p.id}>
+                <ProjectCard project={p} />
+              </li>
             ))}
-          </div>
-        </header>
-
-        <section className="proj-grid" aria-label="Project list">
-          {filtered.map((p, i) => (
-            <ProjectCard
-              key={p.id}
-              project={p}
-              index={i}
-              pattern={PATTERNS[(p.id - 1) % PATTERNS.length]}
-            />
-          ))}
-        </section>
-      </main>
-    </>
+          </ul>
+        </div>
+      </Section>
+    </div>
   )
 }
