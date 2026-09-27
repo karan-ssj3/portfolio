@@ -1,0 +1,81 @@
+name: Deploy site to Hostinger
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'backend/**'
+      - '**/*.md'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'backend/**'
+      - '**/*.md'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List changes without uploading anything (PRs always run as dry-run)'
+        type: boolean
+        default: false
+
+# Serialize deploys: queue instead of cancelling an in-flight run.
+concurrency:
+  group: deploy-hostinger
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DRY_RUN: ${{ github.event_name == 'pull_request' || inputs.dry_run == true }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build site
+        run: npm run build
+
+      - name: Verify build output
+        run: |
+          for f in dist/index.html dist/.htaccess; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing required build artifact: $f"
+              exit 1
+            fi
+          done
+
+      - name: List FTP root and target dir (dry run only)
+        if: ${{ env.DRY_RUN == 'true' }}
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_SERVER_DIR: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
+        run: |
+          curl --silent --show-error --list-only --ftp-pasv "ftp://$FTP_SERVER/" --user "$FTP_USERNAME:$FTP_PASSWORD"
+          echo "--- target: $FTP_SERVER_DIR ---"
+          curl --silent --show-error --list-only --ftp-pasv "ftp://$FTP_SERVER/$FTP_SERVER_DIR" --user "$FTP_USERNAME:$FTP_PASSWORD"
+
+      - name: Upload to Hostinger
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: ${{ vars.FTP_SERVER_DIR || 'public_html/' }}
+          dry-run: ${{ env.DRY_RUN == 'true' }}
+          log-level: standard
