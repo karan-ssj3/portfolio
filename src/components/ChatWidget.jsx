@@ -52,7 +52,7 @@ function renderMarkdown(text) {
 }
 
 export default function ChatWidget() {
-  const [open,          setOpen]          = useState(true)
+  const [open,          setOpen]          = useState(false)
   const [messages,      setMessages]      = useState([WELCOME])
   const [input,         setInput]         = useState('')
   const [loading,       setLoading]       = useState(false)
@@ -62,6 +62,7 @@ export default function ChatWidget() {
   const inputRef  = useRef(null)
   const panelRef  = useRef(null)
   const triggerRef = useRef(null)
+  const wasOpenRef = useRef(false)
 
   // Scroll only the messages panel itself. scrollIntoView would also
   // scroll the page (and fight the page's smooth scroller).
@@ -78,17 +79,30 @@ export default function ChatWidget() {
     }
   }, [messages, loading])
 
+  // Closed panel is inert so it never takes focus or clicks.
+  useEffect(() => {
+    const panel = panelRef.current
+    if (!panel) return
+    panel.inert = !open
+    if (open) panel.removeAttribute('inert')
+    else panel.setAttribute('inert', '')
+  }, [open])
+
+  // Focus the input on open; return focus to the launcher on close.
   useEffect(() => {
     if (open) {
-      const delay = prefersReducedMotion() ? 0 : 300
-      const t = setTimeout(() => inputRef.current?.focus({ preventScroll: true }), delay)
-      return () => clearTimeout(t)
+      wasOpenRef.current = true
+      const id = requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }))
+      return () => cancelAnimationFrame(id)
+    }
+    if (wasOpenRef.current) {
+      wasOpenRef.current = false
+      triggerRef.current?.focus({ preventScroll: true })
     }
   }, [open])
 
   const closePanel = useCallback(() => {
     setOpen(false)
-    triggerRef.current?.focus({ preventScroll: true })
   }, [])
 
   // Focus trap: keep Tab cycling inside the open panel; Escape closes.
@@ -104,18 +118,18 @@ export default function ChatWidget() {
       const panel = panelRef.current
       if (!panel) return
       const focusables = panel.querySelectorAll(
-        'button, input, [href], [tabindex]:not([tabindex="-1"])'
+        'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
       )
-      if (!focusables.length) return
+      if (!focusables.length) { e.preventDefault(); return }
       const first = focusables[0]
       const last  = focusables[focusables.length - 1]
-      if (e.shiftKey && document.activeElement === first) {
+      if (!panel.contains(document.activeElement)) {
+        e.preventDefault()
+        first.focus()
+      } else if (e.shiftKey && document.activeElement === first) {
         e.preventDefault()
         last.focus()
       } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault()
-        first.focus()
-      } else if (!panel.contains(document.activeElement)) {
         e.preventDefault()
         first.focus()
       }
@@ -173,19 +187,22 @@ export default function ChatWidget() {
 
   return (
     <>
+      {/* Scrim (visible on mobile only, via CSS) */}
+      {open && <div className="cw-scrim" onClick={closePanel} aria-hidden="true" />}
+
       {/* Panel */}
       <div
         ref={panelRef}
         id="chat-panel"
         className={`cw-panel${open ? ' cw-panel-open' : ''}`}
         role="dialog"
-        aria-label="Ask Karan's AI"
+        aria-modal="true"
+        aria-labelledby="cw-title"
         aria-hidden={!open}
-        aria-modal={open ? 'true' : undefined}
       >
         <div className="cw-header">
           <div className="cw-header-dot" aria-hidden="true" />
-          <div className="cw-header-title">Ask Karan's AI</div>
+          <div className="cw-header-title" id="cw-title">Ask Karan's AI</div>
           <div className="cw-header-badge">RAG-powered</div>
           <button
             className="cw-close"
@@ -258,26 +275,25 @@ export default function ChatWidget() {
         </div>
       </div>
 
-      {/* Trigger */}
+      {/* Launcher (hidden while open) */}
       <button
         ref={triggerRef}
-        className={`cw-trigger${open ? ' cw-trigger-open' : ''}`}
-        onClick={() => setOpen(o => !o)}
-        aria-label={open ? 'Close chat' : 'Open chat'}
+        type="button"
+        className="cw-trigger"
+        onClick={() => setOpen(true)}
         aria-expanded={open}
         aria-controls="chat-panel"
+        hidden={open}
       >
-        <span className="cw-trigger-icon" aria-hidden="true">
-          {open ? (
-            <span className="cw-trigger-close">+</span>
-          ) : (
-            <span className="cw-bars">
-              <span className="cw-bar" />
-              <span className="cw-bar" />
-              <span className="cw-bar" />
-            </span>
-          )}
-        </span>
+        <svg className="cw-trigger-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <path
+            d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 4v-4H6.5A2.5 2.5 0 0 1 4 13.5z"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span>Ask Karan’s AI</span>
       </button>
     </>
   )
